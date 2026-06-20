@@ -2,25 +2,96 @@ import './style.css';
 import Matter from 'matter-js';
 import { saveScore, getTopScores } from './firebase.js';
 
+// --- Audio System (Web Audio API) ---
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+function playDropSound() {
+  if(audioCtx.state === 'suspended') return;
+  const osc = audioCtx.createOscillator();
+  const gainNode = audioCtx.createGain();
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(400, audioCtx.currentTime);
+  osc.frequency.exponentialRampToValueAtTime(600, audioCtx.currentTime + 0.1);
+  gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
+  gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+  osc.connect(gainNode);
+  gainNode.connect(audioCtx.destination);
+  osc.start();
+  osc.stop(audioCtx.currentTime + 0.1);
+}
+
+function playMergeSound(tier) {
+  if(audioCtx.state === 'suspended') return;
+  const osc = audioCtx.createOscillator();
+  const gainNode = audioCtx.createGain();
+  osc.type = 'triangle';
+  const freq = 300 + (tier * 40);
+  osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+  gainNode.gain.setValueAtTime(0.2, audioCtx.currentTime);
+  gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+  osc.connect(gainNode);
+  gainNode.connect(audioCtx.destination);
+  osc.start();
+  osc.stop(audioCtx.currentTime + 0.3);
+}
+
+let bgmGain = null;
+let bgmInterval = null;
+function startBGM() {
+  if(audioCtx.state === 'suspended') audioCtx.resume();
+  if(bgmInterval) return;
+  
+  bgmGain = audioCtx.createGain();
+  bgmGain.gain.value = 0.05; // Very soft background
+  bgmGain.connect(audioCtx.destination);
+  
+  // Relaxing chord progression notes
+  const notes = [261.63, 329.63, 392.00, 523.25]; // C E G C
+  let noteIdx = 0;
+  
+  bgmInterval = setInterval(() => {
+    if(isGameOver) return;
+    const osc = audioCtx.createOscillator();
+    osc.type = 'sine';
+    osc.frequency.value = notes[noteIdx];
+    
+    const noteGain = audioCtx.createGain();
+    noteGain.gain.setValueAtTime(0.05, audioCtx.currentTime);
+    noteGain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 1.5);
+    
+    osc.connect(noteGain);
+    noteGain.connect(bgmGain);
+    
+    osc.start();
+    osc.stop(audioCtx.currentTime + 1.5);
+    
+    noteIdx = (noteIdx + 1) % notes.length;
+  }, 2000);
+}
+
 // --- Game Configuration & State ---
-const GAME_WIDTH = 400;
-const GAME_HEIGHT = 600;
+// Dynamically size based on screen, capped at 600px width
+let GAME_WIDTH = Math.min(window.innerWidth, 600);
+let GAME_HEIGHT = window.innerHeight;
 const WALL_THICKNESS = 60;
-const TOP_LIMIT = 100; // y-coordinate limit for Game Over
+const TOP_LIMIT = GAME_HEIGHT * 0.15; // Top limit is 15% from the top
+
+// Calculate a scale factor to make fruits fit nicely regardless of screen width
+const scaleFactor = GAME_WIDTH / 400;
 
 // Fruit configurations (tier 0 to 10)
 const FRUITS = [
-  { radius: 15, color: '#ff0000', emoji: '🍒', points: 1 },    // 0: Cherry
-  { radius: 25, color: '#ff8888', emoji: '🍓', points: 3 },    // 1: Strawberry
-  { radius: 35, color: '#800080', emoji: '🍇', points: 6 },    // 2: Grape
-  { radius: 45, color: '#ffa500', emoji: '🍊', points: 10 },   // 3: Dekopon
-  { radius: 60, color: '#ff8c00', emoji: '🟠', points: 15 },   // 4: Orange
-  { radius: 75, color: '#ff0000', emoji: '🍎', points: 21 },   // 5: Apple
-  { radius: 95, color: '#fada5e', emoji: '🍐', points: 28 },   // 6: Pear
-  { radius: 115, color: '#ffb6c1', emoji: '🍑', points: 36 },  // 7: Peach
-  { radius: 140, color: '#ffe4b5', emoji: '🍍', points: 45 },  // 8: Pineapple
-  { radius: 170, color: '#90ee90', emoji: '🍈', points: 55 },  // 9: Melon
-  { radius: 200, color: '#006400', emoji: '🍉', points: 66 },  // 10: Watermelon
+  { name: "Cereza", radius: 15 * scaleFactor, color: '#ff4d4d', emoji: '🍒', points: 1 },
+  { name: "Fresa", radius: 25 * scaleFactor, color: '#ff8888', emoji: '🍓', points: 3 },
+  { name: "Uva", radius: 35 * scaleFactor, color: '#8a2be2', emoji: '🍇', points: 6 },
+  { name: "Mandarina", radius: 45 * scaleFactor, color: '#ffa500', emoji: '🍊', points: 10 },
+  { name: "Naranja", radius: 60 * scaleFactor, color: '#ff8c00', emoji: '🟠', points: 15 },
+  { name: "Manzana", radius: 75 * scaleFactor, color: '#dc143c', emoji: '🍎', points: 21 },
+  { name: "Pera", radius: 95 * scaleFactor, color: '#fada5e', emoji: '🍐', points: 28 },
+  { name: "Durazno", radius: 115 * scaleFactor, color: '#ffb6c1', emoji: '🍑', points: 36 },
+  { name: "Piña", radius: 140 * scaleFactor, color: '#ffe4b5', emoji: '🍍', points: 45 },
+  { name: "Melón", radius: 170 * scaleFactor, color: '#90ee90', emoji: '🍈', points: 55 },
+  { name: "Sandía", radius: 200 * scaleFactor, color: '#228b22', emoji: '🍉', points: 66 },
 ];
 
 let engine, render, runner;
@@ -32,14 +103,16 @@ let isDropping = false;
 // DOM Elements
 const scoreEl = document.getElementById('score');
 const nextPreviewEl = document.getElementById('next-fruit-preview');
+const nextFruitNameEl = document.getElementById('next-fruit-name');
 const gameOverScreen = document.getElementById('game-over-screen');
+const startScreen = document.getElementById('start-screen');
 const finalScoreEl = document.getElementById('final-score');
 const restartBtn = document.getElementById('restart-button');
+const startGameBtn = document.getElementById('start-game-btn');
 const gameContainer = document.getElementById('game-container');
 
 // --- Initialization ---
 function init() {
-  // Setup Matter.js modules
   engine = Matter.Engine.create();
   
   render = Matter.Render.create({
@@ -53,10 +126,10 @@ function init() {
     }
   });
 
-  // Create Boundaries (Left, Right, Bottom)
+  // Create Boundaries (Left, Right, Bottom) with transparent stroke
   const wallOptions = { 
     isStatic: true,
-    render: { fillStyle: '#8d6e63' }
+    render: { fillStyle: '#ffb6c1', lineWidth: 0, strokeStyle: 'transparent' }
   };
   
   const ground = Matter.Bodies.rectangle(GAME_WIDTH / 2, GAME_HEIGHT + WALL_THICKNESS / 2, GAME_WIDTH + WALL_THICKNESS * 2, WALL_THICKNESS, wallOptions);
@@ -64,58 +137,66 @@ function init() {
   const rightWall = Matter.Bodies.rectangle(GAME_WIDTH + WALL_THICKNESS / 2, GAME_HEIGHT / 2, WALL_THICKNESS, GAME_HEIGHT * 2, wallOptions);
 
   Matter.World.add(engine.world, [ground, leftWall, rightWall]);
-
-  // Handle Collisions (Merging)
   Matter.Events.on(engine, 'collisionStart', handleCollisions);
 
-  // Setup Interaction
   setupInput();
 
-  // Start the engine and renderer
   Matter.Render.run(render);
   runner = Matter.Runner.create();
   Matter.Runner.run(runner, engine);
-
-  // Start Game Loop (for custom rendering like emojis and game over checks)
   Matter.Events.on(render, 'afterRender', gameLoop);
 
-  // Initial State
-  resetGame();
+  // Don't start until user clicks Start (Audio context requires user gesture)
 }
 
 // --- Game Logic ---
 
 function resetGame() {
-  Matter.World.clear(engine.world);
-  Matter.Engine.clear(engine);
-  Matter.World.add(engine.world, [
-    Matter.Bodies.rectangle(GAME_WIDTH / 2, GAME_HEIGHT + WALL_THICKNESS / 2, GAME_WIDTH + WALL_THICKNESS * 2, WALL_THICKNESS, { isStatic: true, render: { fillStyle: '#8d6e63' } }),
-    Matter.Bodies.rectangle(0 - WALL_THICKNESS / 2, GAME_HEIGHT / 2, WALL_THICKNESS, GAME_HEIGHT * 2, { isStatic: true, render: { fillStyle: '#8d6e63' } }),
-    Matter.Bodies.rectangle(GAME_WIDTH + WALL_THICKNESS / 2, GAME_HEIGHT / 2, WALL_THICKNESS, GAME_HEIGHT * 2, { isStatic: true, render: { fillStyle: '#8d6e63' } })
-  ]);
-  
-  currentScore = 0;
   isGameOver = false;
+  currentScore = 0;
   updateScore();
+  
+  // Remove only the fruits, keep the walls
+  const bodies = Matter.Composite.allBodies(engine.world);
+  const fruitsToRemove = bodies.filter(b => b.fruitTier !== undefined);
+  Matter.World.remove(engine.world, fruitsToRemove);
+  
   gameOverScreen.classList.add('hidden');
   rollNextFruit();
+  startBGM();
 }
 
 function rollNextFruit() {
-  // Randomly pick one of the first 5 fruits (tiers 0 to 4)
   nextFruitTier = Math.floor(Math.random() * 5);
   const next = FRUITS[nextFruitTier];
   
-  nextPreviewEl.innerHTML = '';
-  const previewDiv = document.createElement('div');
-  previewDiv.className = 'fruit-preview-circle';
-  previewDiv.style.width = `${next.radius}px`;
-  previewDiv.style.height = `${next.radius}px`;
-  previewDiv.style.backgroundColor = next.color;
-  previewDiv.innerText = next.emoji;
-  previewDiv.style.fontSize = `${next.radius * 0.7}px`;
+  nextFruitNameEl.innerText = next.name;
   
-  nextPreviewEl.appendChild(previewDiv);
+  nextPreviewEl.innerHTML = '';
+  const previewCanvas = document.createElement('canvas');
+  const size = next.radius * 2;
+  previewCanvas.width = size;
+  previewCanvas.height = size;
+  const ctx = previewCanvas.getContext('2d');
+  
+  // Draw preview face
+  ctx.translate(size/2, size/2);
+  ctx.beginPath();
+  ctx.arc(0, 0, next.radius, 0, 2 * Math.PI);
+  ctx.fillStyle = next.color;
+  ctx.fill();
+  
+  ctx.font = `${next.radius * 1.2}px Arial`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(next.emoji, 0, 0);
+  
+  ctx.beginPath();
+  ctx.arc(-next.radius * 0.3, -next.radius * 0.3, next.radius * 0.25, 0, 2 * Math.PI);
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
+  ctx.fill();
+  
+  nextPreviewEl.appendChild(previewCanvas);
 }
 
 function updateScore() {
@@ -126,8 +207,6 @@ function dropFruit(x) {
   if (isGameOver || isDropping) return;
   
   const fruitConfig = FRUITS[nextFruitTier];
-  
-  // Constrain x so it doesn't spawn inside a wall
   const spawnX = Math.max(fruitConfig.radius, Math.min(x, GAME_WIDTH - fruitConfig.radius));
   
   const body = Matter.Bodies.circle(spawnX, TOP_LIMIT, fruitConfig.radius, {
@@ -135,16 +214,16 @@ function dropFruit(x) {
     friction: 0.1,
     render: {
       fillStyle: fruitConfig.color,
+      lineWidth: 0,
+      strokeStyle: 'transparent'
     },
     label: `fruit-${nextFruitTier}`
   });
 
-  // Assign tier to the body for merging logic
   body.fruitTier = nextFruitTier;
-
   Matter.World.add(engine.world, body);
+  playDropSound();
   
-  // Prevent spamming drops
   isDropping = true;
   setTimeout(() => {
     isDropping = false;
@@ -159,15 +238,10 @@ function handleCollisions(event) {
     const bodyA = pairs[i].bodyA;
     const bodyB = pairs[i].bodyB;
 
-    // Check if both are fruits and have the same tier
     if (bodyA.fruitTier !== undefined && bodyB.fruitTier !== undefined) {
       if (bodyA.fruitTier === bodyB.fruitTier) {
-        
-        // Prevent merging max tier (watermelon)
-        if (bodyA.fruitTier === FRUITS.length - 1) continue;
+        if (bodyA.fruitTier === FRUITS.length - 1) continue; // Max tier
 
-        // Ensure we only process this pair once by removing them
-        // if they are still in the world
         const isAInWorld = Matter.Composite.get(engine.world, bodyA.id, 'body');
         const isBInWorld = Matter.Composite.get(engine.world, bodyB.id, 'body');
         
@@ -175,25 +249,22 @@ function handleCollisions(event) {
           const nextTier = bodyA.fruitTier + 1;
           const newFruitConfig = FRUITS[nextTier];
           
-          // Calculate midpoint for spawn
           const newX = (bodyA.position.x + bodyB.position.x) / 2;
           const newY = (bodyA.position.y + bodyB.position.y) / 2;
 
-          // Remove old bodies
           Matter.World.remove(engine.world, [bodyA, bodyB]);
 
-          // Create new merged body
           const newBody = Matter.Bodies.circle(newX, newY, newFruitConfig.radius, {
             restitution: 0.2,
             friction: 0.1,
-            render: { fillStyle: newFruitConfig.color },
+            render: { fillStyle: newFruitConfig.color, lineWidth: 0, strokeStyle: 'transparent' },
             label: `fruit-${nextTier}`
           });
           newBody.fruitTier = nextTier;
 
           Matter.World.add(engine.world, newBody);
+          playMergeSound(nextTier);
           
-          // Add score
           currentScore += newFruitConfig.points;
           updateScore();
         }
@@ -203,12 +274,9 @@ function handleCollisions(event) {
 }
 
 function gameLoop() {
-  if (isGameOver) return;
-
   const context = render.context;
   const bodies = Matter.Composite.allBodies(engine.world);
 
-  // Custom Rendering for Cute Faces
   for (let i = 0; i < bodies.length; i++) {
     const body = bodies[i];
     
@@ -231,21 +299,18 @@ function gameLoop() {
       context.fill();
 
       // Draw cute face on top of the fruit
-      context.fillStyle = '#4a2511'; // Dark brown for eyes/mouth
+      context.fillStyle = '#4a2511'; 
       const eyeOffset = config.radius * 0.35;
       const eyeSize = config.radius * 0.08 + 1.5;
       
-      // Left eye
       context.beginPath();
       context.arc(-eyeOffset, -eyeOffset * 0.1, eyeSize, 0, Math.PI * 2);
       context.fill();
       
-      // Right eye
       context.beginPath();
       context.arc(eyeOffset, -eyeOffset * 0.1, eyeSize, 0, Math.PI * 2);
       context.fill();
       
-      // Blush
       context.fillStyle = 'rgba(255, 120, 150, 0.4)';
       context.beginPath();
       context.arc(-eyeOffset * 1.3, eyeOffset * 0.3, eyeSize * 1.8, 0, Math.PI * 2);
@@ -254,24 +319,20 @@ function gameLoop() {
       context.arc(eyeOffset * 1.3, eyeOffset * 0.3, eyeSize * 1.8, 0, Math.PI * 2);
       context.fill();
       
-      // Smile (a little arc)
       context.strokeStyle = '#4a2511';
       context.lineWidth = Math.max(1.5, config.radius * 0.06);
       context.lineCap = 'round';
       context.beginPath();
       
-      // Watermelon gets a big open mouth
       if (body.fruitTier === 10) {
         context.arc(0, eyeOffset * 0.2, eyeOffset * 0.5, 0, Math.PI);
         context.stroke();
         context.fillStyle = '#ff7777';
         context.fill();
       } else if (body.fruitTier === 0) {
-        // Cherry gets a small cute mouth
         context.arc(0, eyeOffset * 0.2, eyeOffset * 0.3, 0.2, Math.PI - 0.2);
         context.stroke();
       } else {
-        // Default smile
         context.arc(0, eyeOffset * 0.1, eyeOffset * 0.6, 0.1, Math.PI - 0.1);
         context.stroke();
       }
@@ -279,23 +340,23 @@ function gameLoop() {
       context.restore();
     }
     
-    // Game Over Check: If any stationary fruit is above the TOP_LIMIT line
-    if (body.fruitTier !== undefined && body.position.y < TOP_LIMIT && body.velocity.y > -0.5 && body.velocity.y < 0.5) {
-      // Small grace period check to ensure it's not just bouncing
+    if (!isGameOver && body.fruitTier !== undefined && body.position.y < TOP_LIMIT && body.velocity.y > -0.5 && body.velocity.y < 0.5) {
       if (body.speed < 1) {
         triggerGameOver();
       }
     }
   }
   
-  // Draw Top Limit Line (Danger Line)
-  context.beginPath();
-  context.moveTo(0, TOP_LIMIT);
-  context.lineTo(GAME_WIDTH, TOP_LIMIT);
-  context.strokeStyle = 'rgba(255, 0, 0, 0.5)';
-  context.setLineDash([10, 10]);
-  context.stroke();
-  context.setLineDash([]);
+  if (!isGameOver) {
+    context.beginPath();
+    context.moveTo(0, TOP_LIMIT);
+    context.lineTo(GAME_WIDTH, TOP_LIMIT);
+    context.strokeStyle = 'rgba(255, 105, 180, 0.5)';
+    context.lineWidth = 2;
+    context.setLineDash([10, 10]);
+    context.stroke();
+    context.setLineDash([]);
+  }
 }
 
 function triggerGameOver() {
@@ -303,7 +364,6 @@ function triggerGameOver() {
   isGameOver = true;
   finalScoreEl.innerText = currentScore;
   
-  // Reset submission UI
   document.getElementById('submit-score-section').style.display = 'flex';
   document.getElementById('player-name').value = '';
   const submitBtn = document.getElementById('submit-score-btn');
@@ -311,7 +371,6 @@ function triggerGameOver() {
   submitBtn.innerText = 'Guardar Puntaje';
   
   gameOverScreen.classList.remove('hidden');
-  
   loadLeaderboard();
 }
 
@@ -329,29 +388,34 @@ async function loadLeaderboard() {
   
   topScores.forEach((scoreObj, index) => {
     const li = document.createElement('li');
-    li.innerHTML = `<span>#${index + 1} ${scoreObj.name}</span> <span>${scoreObj.score}</span>`;
+    li.innerHTML = `<span>#${index + 1} <b>${scoreObj.name}</b></span> <span>${scoreObj.score}</span>`;
     listEl.appendChild(li);
   });
 }
 
 function setupInput() {
-  // Handle mouse click or touch on the game container
+  startGameBtn.addEventListener('click', () => {
+    if(audioCtx.state === 'suspended') audioCtx.resume();
+    startScreen.classList.add('hidden');
+    resetGame();
+  });
+
   gameContainer.addEventListener('mousedown', (e) => {
     const rect = gameContainer.getBoundingClientRect();
-    const scale = rect.width / GAME_WIDTH;
-    const x = (e.clientX - rect.left) / scale;
+    const x = e.clientX - rect.left;
     dropFruit(x);
   });
   
   gameContainer.addEventListener('touchstart', (e) => {
-    e.preventDefault(); // Prevent scrolling
+    e.preventDefault();
     const rect = gameContainer.getBoundingClientRect();
-    const scale = rect.width / GAME_WIDTH;
-    const x = (e.touches[0].clientX - rect.left) / scale;
+    const x = e.touches[0].clientX - rect.left;
     dropFruit(x);
   }, { passive: false });
 
-  restartBtn.addEventListener('click', resetGame);
+  restartBtn.addEventListener('click', () => {
+    resetGame();
+  });
   
   document.getElementById('submit-score-btn').addEventListener('click', async () => {
     const nameInput = document.getElementById('player-name');
