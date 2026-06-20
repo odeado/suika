@@ -295,7 +295,7 @@ function rollNextFruit() {
   ctx.fillStyle = next.color;
   ctx.fill();
   
-  ctx.font = `${next.radius * 1.6}px Arial`;
+  ctx.font = `${next.radius * 1.4}px Arial`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillText(next.emoji, 0, 0);
@@ -419,7 +419,7 @@ function gameLoop() {
       context.rotate(body.angle);
       
       // Emoji
-      context.font = `${config.radius * 1.6}px Arial`;
+      context.font = `${config.radius * 1.4}px Arial`;
       context.textAlign = 'center';
       context.textBaseline = 'middle';
       context.fillText(config.emoji, 0, 0);

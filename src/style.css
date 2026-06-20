@@ -94,10 +94,12 @@ body::before {
 }
 
 #next-fruit-preview canvas {
-  /* Fix squishing */
+  /* Prevent small fruits from stretching */
   flex-shrink: 0;
-  width: 100% !important;
-  height: 100% !important;
+  max-width: 100%;
+  max-height: 100%;
+  width: auto !important;
+  height: auto !important;
   object-fit: contain;
 }
 
