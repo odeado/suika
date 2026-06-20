@@ -111,7 +111,7 @@ export const listenToRoom = (roomCode, callback) => {
   });
 };
 
-export const updateRoomState = async (roomCode, isPlayer1, dataToUpdate) => {
+export const updateRoomState = async (roomCode, isPlayer1, dataToUpdate, status = null) => {
   try {
     const roomDoc = doc(roomsRef, roomCode);
     const fieldPrefix = isPlayer1 ? 'player1' : 'player2';
@@ -119,6 +119,7 @@ export const updateRoomState = async (roomCode, isPlayer1, dataToUpdate) => {
     const updates = {};
     if (dataToUpdate.score !== undefined) updates[`${fieldPrefix}.score`] = dataToUpdate.score;
     if (dataToUpdate.punishments !== undefined) updates[`${fieldPrefix}.punishments`] = dataToUpdate.punishments;
+    if (status !== null) updates.status = status;
     
     await updateDoc(roomDoc, updates);
   } catch (error) {

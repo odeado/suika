@@ -8,7 +8,7 @@ body {
   padding: 0;
   /* Softened background */
   background-color: var(--bg-color);
-  background-image: url('/src/cute_fruits_bg.png'); /* The user will need to move the generated image here, or I can just use absolute URL if I know it, but usually assets are in public or src. Wait, I should instruct them or just use a solid color fallback */
+  background-image: url('/cute_fruits_bg.png'); /* Fixed URL */
   background-size: 300px;
   background-position: center;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -27,7 +27,7 @@ body::before {
   content: '';
   position: absolute;
   top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(255, 255, 255, 0.75);
+  background: rgba(255, 255, 255, 0.85); /* Made it softer */
   z-index: 0;
 }
 
@@ -78,22 +78,27 @@ body::before {
   position: absolute;
   top: 20px;
   right: 20px;
-  font-weight: bold;
-  color: var(--text-color);
-  text-align: right;
-  text-shadow: 1px 1px 0 #fff, -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff;
 }
 
 #next-fruit-preview {
   display: flex;
-  justify-content: flex-end;
+  justify-content: center;
+  align-items: center;
+  width: 60px;
+  height: 60px;
+  background-color: rgba(255, 255, 255, 0.6);
+  border: 3px solid #ffb6c1;
+  border-radius: 50%;
+  box-shadow: 0 4px 10px rgba(255, 105, 180, 0.2);
+  padding: 5px;
 }
 
 #next-fruit-preview canvas {
   /* Fix squishing */
   flex-shrink: 0;
-  width: auto !important;
-  height: auto !important;
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: contain;
 }
 
 .hidden {

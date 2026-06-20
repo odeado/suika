@@ -110,7 +110,6 @@ let localPunishmentCount = 0;
 // DOM Elements
 const scoreEl = document.getElementById('score');
 const nextPreviewEl = document.getElementById('next-fruit-preview');
-const nextFruitNameEl = document.getElementById('next-fruit-name');
 const gameOverScreen = document.getElementById('game-over-screen');
 const startScreen = document.getElementById('start-screen');
 const finalScoreEl = document.getElementById('final-score');
@@ -234,6 +233,16 @@ function startGame() {
     // Start listening to score and punishments
     if(unsubscribeRoom) unsubscribeRoom();
     unsubscribeRoom = listenToRoom(roomCode, (data) => {
+      // Check for win/loss
+      if (data.status === 'player1_lost' && !isPlayer1) {
+        triggerWin();
+        return;
+      }
+      if (data.status === 'player2_lost' && isPlayer1) {
+        triggerWin();
+        return;
+      }
+
       const opponentData = isPlayer1 ? data.player2 : data.player1;
       const myData = isPlayer1 ? data.player1 : data.player2;
       
@@ -273,8 +282,6 @@ function rollNextFruit() {
   nextFruitTier = Math.floor(Math.random() * 5); // Drops tier 0 to 4
   const next = FRUITS[nextFruitTier];
   
-  nextFruitNameEl.innerText = next.name;
-  
   nextPreviewEl.innerHTML = '';
   const previewCanvas = document.createElement('canvas');
   const size = next.radius * 2;
@@ -288,7 +295,7 @@ function rollNextFruit() {
   ctx.fillStyle = next.color;
   ctx.fill();
   
-  ctx.font = `${next.radius * 1.2}px Arial`;
+  ctx.font = `${next.radius * 1.6}px Arial`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillText(next.emoji, 0, 0);
@@ -412,7 +419,7 @@ function gameLoop() {
       context.rotate(body.angle);
       
       // Emoji
-      context.font = `${config.radius * 1.2}px Arial`;
+      context.font = `${config.radius * 1.6}px Arial`;
       context.textAlign = 'center';
       context.textBaseline = 'middle';
       context.fillText(config.emoji, 0, 0);
@@ -526,8 +533,31 @@ function triggerGameOver() {
   gameOverScreen.classList.remove('hidden');
   loadLeaderboard();
 
+  if (isMultiplayer) {
+    updateRoomState(roomCode, isPlayer1, {}, isPlayer1 ? 'player1_lost' : 'player2_lost');
+    if (unsubscribeRoom) {
+      unsubscribeRoom();
+      unsubscribeRoom = null;
+    }
+  }
+}
+
+function triggerWin() {
+  if (isGameOver) return;
+  isGameOver = true;
+  document.getElementById('game-over-title').innerText = "¡Ganaste! 🎉";
+  finalScoreEl.innerText = currentScore;
+  
+  document.getElementById('submit-score-section').style.display = 'flex';
+  document.getElementById('player-name').value = '';
+  const submitBtn = document.getElementById('submit-score-btn');
+  submitBtn.disabled = false;
+  submitBtn.innerText = 'Guardar Puntaje';
+  
+  gameOverScreen.classList.remove('hidden');
+  loadLeaderboard();
+
   if (isMultiplayer && unsubscribeRoom) {
-    // Keep listening or clean up? Let's clean up
     unsubscribeRoom();
     unsubscribeRoom = null;
   }
