@@ -291,6 +291,14 @@ function rollNextFruit() {
   const ctx = previewCanvas.getContext('2d');
   
   ctx.translate(boxSize/2, boxSize/2);
+
+  // Prevent large fruits from overflowing the 60x60 box
+  const maxAllowedRadius = (boxSize / 2) - 4; // 26px max radius
+  if (next.radius > maxAllowedRadius) {
+    const scale = maxAllowedRadius / next.radius;
+    ctx.scale(scale, scale);
+  }
+
   ctx.beginPath();
   ctx.arc(0, 0, next.radius, 0, 2 * Math.PI);
   ctx.fillStyle = next.color;
@@ -300,6 +308,38 @@ function rollNextFruit() {
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillText(next.emoji, 0, 0);
+
+  // Cute face
+  ctx.fillStyle = '#4a2511'; 
+  const eyeOffset = next.radius * 0.35;
+  const eyeSize = next.radius * 0.08 + 1;
+  
+  ctx.beginPath();
+  ctx.arc(-eyeOffset, -eyeOffset * 0.1, eyeSize, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(eyeOffset, -eyeOffset * 0.1, eyeSize, 0, Math.PI * 2);
+  ctx.fill();
+  
+  ctx.fillStyle = 'rgba(255, 120, 150, 0.4)';
+  ctx.beginPath();
+  ctx.arc(-eyeOffset * 1.3, eyeOffset * 0.3, eyeSize * 1.8, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(eyeOffset * 1.3, eyeOffset * 0.3, eyeSize * 1.8, 0, Math.PI * 2);
+  ctx.fill();
+  
+  ctx.strokeStyle = '#4a2511';
+  ctx.lineWidth = Math.max(1.5, next.radius * 0.06);
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.arc(0, eyeOffset * 0.1, eyeOffset * 0.6, 0.1, Math.PI - 0.1);
+  ctx.stroke();
+  
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+  ctx.beginPath();
+  ctx.arc(-next.radius * 0.4, -next.radius * 0.4, next.radius * 0.1, 0, 2 * Math.PI);
+  ctx.fill();
   
   nextPreviewEl.appendChild(previewCanvas);
 }
