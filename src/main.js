@@ -81,19 +81,6 @@ function init() {
 
   // Initial State
   resetGame();
-  
-  // Handle resizing for mobile adaptation
-  window.addEventListener('resize', resizeGame);
-  resizeGame();
-}
-
-function resizeGame() {
-  // Scale the container to fit within the viewport
-  const scale = Math.min(
-    window.innerWidth / GAME_WIDTH,
-    window.innerHeight / GAME_HEIGHT
-  );
-  gameContainer.style.transform = `scale(${scale})`;
 }
 
 // --- Game Logic ---
@@ -221,21 +208,67 @@ function gameLoop() {
   const context = render.context;
   const bodies = Matter.Composite.allBodies(engine.world);
 
-  // Custom Rendering for Emojis
+  // Custom Rendering for Cute Faces
   for (let i = 0; i < bodies.length; i++) {
     const body = bodies[i];
     
-    // Draw Emojis
     if (body.fruitTier !== undefined) {
       const config = FRUITS[body.fruitTier];
       context.save();
       context.translate(body.position.x, body.position.y);
       context.rotate(body.angle);
       
-      context.font = `${config.radius * 1.2}px Arial`;
-      context.textAlign = 'center';
-      context.textBaseline = 'middle';
-      context.fillText(config.emoji, 0, 0);
+      // Draw a subtle highlight (gloss)
+      context.beginPath();
+      context.arc(-config.radius * 0.3, -config.radius * 0.3, config.radius * 0.25, 0, 2 * Math.PI);
+      context.fillStyle = 'rgba(255, 255, 255, 0.35)';
+      context.fill();
+
+      // Draw cute face
+      context.fillStyle = '#4a2511'; // Dark brown for eyes/mouth
+      const eyeOffset = config.radius * 0.35;
+      const eyeSize = config.radius * 0.08 + 1.5;
+      
+      // Left eye
+      context.beginPath();
+      context.arc(-eyeOffset, -eyeOffset * 0.1, eyeSize, 0, Math.PI * 2);
+      context.fill();
+      
+      // Right eye
+      context.beginPath();
+      context.arc(eyeOffset, -eyeOffset * 0.1, eyeSize, 0, Math.PI * 2);
+      context.fill();
+      
+      // Blush
+      context.fillStyle = 'rgba(255, 120, 150, 0.4)';
+      context.beginPath();
+      context.arc(-eyeOffset * 1.3, eyeOffset * 0.3, eyeSize * 1.8, 0, Math.PI * 2);
+      context.fill();
+      context.beginPath();
+      context.arc(eyeOffset * 1.3, eyeOffset * 0.3, eyeSize * 1.8, 0, Math.PI * 2);
+      context.fill();
+      
+      // Smile (a little arc)
+      context.strokeStyle = '#4a2511';
+      context.lineWidth = Math.max(1.5, config.radius * 0.06);
+      context.lineCap = 'round';
+      context.beginPath();
+      
+      // Watermelon gets a big open mouth
+      if (body.fruitTier === 10) {
+        context.arc(0, eyeOffset * 0.2, eyeOffset * 0.5, 0, Math.PI);
+        context.stroke();
+        context.fillStyle = '#ff7777';
+        context.fill();
+      } else if (body.fruitTier === 0) {
+        // Cherry gets a small cute mouth
+        context.arc(0, eyeOffset * 0.2, eyeOffset * 0.3, 0.2, Math.PI - 0.2);
+        context.stroke();
+      } else {
+        // Default smile
+        context.arc(0, eyeOffset * 0.1, eyeOffset * 0.6, 0.1, Math.PI - 0.1);
+        context.stroke();
+      }
       
       context.restore();
     }

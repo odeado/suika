@@ -21,15 +21,15 @@ body {
 
 #game-container {
   position: relative;
-  width: var(--game-width);
-  height: var(--game-height);
+  /* Auto-scale while maintaining 400x600 (2:3) aspect ratio */
+  width: 100%;
+  height: 100%;
+  max-height: 100dvh;
+  aspect-ratio: 2 / 3;
   background-color: var(--container-bg);
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
   overflow: hidden;
-  /* Add scaling to fit viewport */
-  transform-origin: center center;
-  max-width: 100vw;
-  max-height: 100vh;
+  margin: 0 auto;
 }
 
 /* The canvas created by Matter.js will go here */
@@ -37,6 +37,8 @@ body {
   position: absolute;
   top: 0;
   left: 0;
+  width: 100%;
+  height: 100%;
   z-index: 1;
 }
 
@@ -87,17 +89,17 @@ body {
 }
 
 #game-over-screen {
-  position: absolute;
+  position: fixed;
   top: 0;
   left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(255, 255, 255, 0.85);
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  background-color: rgba(0, 0, 0, 0.6);
   display: flex;
-  flex-direction: column;
   justify-content: center;
   align-items: center;
-  pointer-events: auto; /* Catch clicks */
+  z-index: 100;
   transition: opacity 0.3s;
 }
 
@@ -106,13 +108,26 @@ body {
   pointer-events: none;
 }
 
-#game-over-screen h1 {
-  font-size: 42px;
+.game-over-modal {
+  background-color: #fff;
+  padding: 30px;
+  border-radius: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+  max-width: 90%;
+  width: 350px;
+}
+
+.game-over-modal h1 {
+  font-size: 36px;
+  margin-top: 0;
   margin-bottom: 5px;
   color: #e53935;
 }
 
-#game-over-screen p {
+.game-over-modal p {
   font-size: 20px;
   margin-bottom: 15px;
   font-weight: bold;
@@ -122,8 +137,8 @@ body {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  margin-bottom: 15px;
-  width: 80%;
+  margin-bottom: 20px;
+  width: 100%;
 }
 
 #player-name {
@@ -154,12 +169,12 @@ body {
 }
 
 #leaderboard-section {
-  width: 80%;
-  background: white;
+  width: 100%;
+  background: #f9f9f9;
   border-radius: 10px;
-  padding: 10px;
+  padding: 15px;
   margin-bottom: 20px;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  box-sizing: border-box;
 }
 
 #leaderboard-section h2 {
