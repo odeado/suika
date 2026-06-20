@@ -90,16 +90,13 @@ body::before {
   border: 3px solid #ffb6c1;
   border-radius: 50%;
   box-shadow: 0 4px 10px rgba(255, 105, 180, 0.2);
-  padding: 5px;
+  padding: 0; /* Removed padding so inner 60x60 canvas fits exactly */
 }
 
 #next-fruit-preview canvas {
   display: block;
-  margin: auto;
-  flex-shrink: 0;
-  max-width: 100%;
-  max-height: 100%;
-  object-fit: contain;
+  width: 100%;
+  height: 100%;
 }
 
 .hidden {

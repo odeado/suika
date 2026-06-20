@@ -284,12 +284,13 @@ function rollNextFruit() {
   
   nextPreviewEl.innerHTML = '';
   const previewCanvas = document.createElement('canvas');
-  const size = next.radius * 2;
-  previewCanvas.width = size;
-  previewCanvas.height = size;
+  // Match the CSS container size so we can draw it perfectly centered without CSS stretching
+  const boxSize = 60; 
+  previewCanvas.width = boxSize;
+  previewCanvas.height = boxSize;
   const ctx = previewCanvas.getContext('2d');
   
-  ctx.translate(size/2, size/2);
+  ctx.translate(boxSize/2, boxSize/2);
   ctx.beginPath();
   ctx.arc(0, 0, next.radius, 0, 2 * Math.PI);
   ctx.fillStyle = next.color;
