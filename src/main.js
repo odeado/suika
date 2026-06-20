@@ -218,13 +218,19 @@ function gameLoop() {
       context.translate(body.position.x, body.position.y);
       context.rotate(body.angle);
       
-      // Draw a subtle highlight (gloss)
+      // Draw the original fruit emoji
+      context.font = `${config.radius * 1.2}px Arial`;
+      context.textAlign = 'center';
+      context.textBaseline = 'middle';
+      context.fillText(config.emoji, 0, 0);
+      
+      // Draw a subtle highlight (gloss) over the emoji
       context.beginPath();
       context.arc(-config.radius * 0.3, -config.radius * 0.3, config.radius * 0.25, 0, 2 * Math.PI);
       context.fillStyle = 'rgba(255, 255, 255, 0.35)';
       context.fill();
 
-      // Draw cute face
+      // Draw cute face on top of the fruit
       context.fillStyle = '#4a2511'; // Dark brown for eyes/mouth
       const eyeOffset = config.radius * 0.35;
       const eyeSize = config.radius * 0.08 + 1.5;
