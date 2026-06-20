@@ -11,8 +11,15 @@
     <div id="game-container">
       <div id="ui-layer">
         <div class="score-container">
-          Score: <span id="score">0</span>
+          <div style="font-size: 16px; opacity: 0.8; margin-bottom: 2px;">Puntaje:</div>
+          <span id="score">0</span>
+          
+          <div id="opponent-score-container" class="hidden">
+            <div style="font-size: 14px; opacity: 0.8; margin-top: 10px; color: #ff69b4;">Rival:</div>
+            <span id="opponent-score" style="color: #ff69b4;">0</span>
+          </div>
         </div>
+
         <div class="next-fruit-container">
           <div style="font-size: 14px; opacity: 0.8; margin-bottom: 2px;">Siguiente:</div>
           <div id="next-fruit-name" style="font-size: 16px; margin-bottom: 5px;"></div>
@@ -23,7 +30,7 @@
     
     <div id="game-over-screen" class="hidden">
       <div class="game-over-modal">
-        <h1>¡Juego Terminado!</h1>
+        <h1 id="game-over-title">¡Juego Terminado!</h1>
         <p>Puntaje: <span id="final-score">0</span></p>
         
         <div id="submit-score-section">
@@ -38,16 +45,39 @@
           </ul>
         </div>
 
-        <button id="restart-button">Jugar de Nuevo</button>
+        <button id="restart-button">Volver al Menú</button>
       </div>
     </div>
 
-    <!-- Start Overlay for Audio Policy -->
+    <!-- Start Overlay for Audio Policy and Lobby -->
     <div id="start-screen">
       <div class="start-modal">
         <h1>🍉 Suika Kawaii</h1>
-        <p>¡Une las frutas para llegar a la sandía!</p>
-        <button id="start-game-btn">¡Empezar a Jugar!</button>
+        <p style="font-size: 14px; margin-bottom: 15px;">¡Une las frutas para llegar a la gran sandía!</p>
+        
+        <div id="mode-selection">
+          <button id="play-solo-btn" class="menu-btn">Jugar Solo</button>
+          <button id="play-multi-btn" class="menu-btn secondary-btn">Modo Multijugador</button>
+        </div>
+
+        <div id="multiplayer-lobby" class="hidden">
+          <h3>Salas Multijugador</h3>
+          <button id="create-room-btn" class="menu-btn">Crear Sala</button>
+          
+          <div style="margin: 15px 0;">O</div>
+          
+          <input type="text" id="room-code-input" placeholder="Ej. A4X9" maxlength="4" style="text-transform: uppercase;"/>
+          <button id="join-room-btn" class="menu-btn secondary-btn">Unirse a Sala</button>
+          <button id="back-to-menu-btn" style="margin-top: 15px; font-size: 14px; padding: 5px 10px; background: none; border: none; text-decoration: underline; color: #666; cursor: pointer;">Volver</button>
+        </div>
+
+        <div id="waiting-room" class="hidden">
+          <h3>Esperando rival...</h3>
+          <p>Tu código de sala es:</p>
+          <h2 id="room-code-display" style="letter-spacing: 5px; font-size: 40px; color: #ff69b4; margin: 10px 0;">----</h2>
+          <p style="font-size: 13px;">Dile a la otra persona que use este código en "Unirse a Sala".</p>
+        </div>
+
       </div>
     </div>
 

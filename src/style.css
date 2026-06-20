@@ -1,18 +1,16 @@
 :root {
   --bg-color: #ffdde1;
-  --container-bg: #fff0f5;
   --text-color: #5d4037;
 }
 
 body {
   margin: 0;
   padding: 0;
-  /* Cute background pattern */
+  /* Softened background */
   background-color: var(--bg-color);
-  background-image: radial-gradient(#ffb6c1 10%, transparent 11%),
-    radial-gradient(#ffb6c1 10%, transparent 11%);
-  background-size: 40px 40px;
-  background-position: 0 0, 20px 20px;
+  background-image: url('/src/cute_fruits_bg.png'); /* The user will need to move the generated image here, or I can just use absolute URL if I know it, but usually assets are in public or src. Wait, I should instruct them or just use a solid color fallback */
+  background-size: 300px;
+  background-position: center;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   display: flex;
   justify-content: center;
@@ -24,16 +22,26 @@ body {
   touch-action: none;
 }
 
+/* White semitransparent overlay over the body to soften the background */
+body::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(255, 255, 255, 0.75);
+  z-index: 0;
+}
+
 #game-container {
   position: relative;
   /* Use full screen on mobile, max width on desktop */
   width: 100vw;
   height: 100dvh;
   max-width: 600px;
-  background-color: rgba(255, 240, 245, 0.85); /* Slightly transparent container */
+  background-color: transparent; /* fully transparent container */
   box-shadow: 0 0 30px rgba(0, 0, 0, 0.1);
   overflow: hidden;
   margin: 0 auto;
+  z-index: 1;
 }
 
 #game-container canvas {
@@ -81,6 +89,17 @@ body {
   justify-content: flex-end;
 }
 
+#next-fruit-preview canvas {
+  /* Fix squishing */
+  flex-shrink: 0;
+  width: auto !important;
+  height: auto !important;
+}
+
+.hidden {
+  display: none !important;
+}
+
 /* Modal Styles */
 #game-over-screen, #start-screen {
   position: fixed;
@@ -97,11 +116,6 @@ body {
   transition: opacity 0.3s;
 }
 
-#game-over-screen.hidden, #start-screen.hidden {
-  opacity: 0;
-  pointer-events: none;
-}
-
 .game-over-modal, .start-modal {
   background-color: #fff;
   padding: 30px;
@@ -113,6 +127,7 @@ body {
   max-width: 90%;
   width: 350px;
   border: 4px solid #ffb6c1;
+  text-align: center;
 }
 
 .game-over-modal h1, .start-modal h1 {
@@ -131,28 +146,14 @@ body {
   text-align: center;
 }
 
-#submit-score-section {
+#mode-selection, #multiplayer-lobby, #waiting-room {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  margin-bottom: 20px;
+  align-items: center;
   width: 100%;
 }
 
-#player-name {
-  padding: 12px;
-  font-size: 16px;
-  border: 2px solid #ffb6c1;
-  border-radius: 12px;
-  text-align: center;
-  outline: none;
-}
-
-#player-name:focus {
-  border-color: #ff69b4;
-}
-
-#submit-score-btn, #restart-button, #start-game-btn {
+.menu-btn {
   padding: 12px 20px;
   background-color: #ff69b4;
   color: white;
@@ -163,18 +164,38 @@ body {
   cursor: pointer;
   transition: transform 0.1s, background-color 0.2s;
   width: 100%;
+  margin-bottom: 10px;
 }
 
-#restart-button {
-  background-color: #4caf50;
-  margin-top: 10px;
+.secondary-btn {
+  background-color: #9370DB;
 }
 
-#submit-score-btn:hover, #start-game-btn:hover { background-color: #ff1493; }
-#restart-button:hover { background-color: #45a049; }
+.menu-btn:hover { filter: brightness(1.1); }
+.menu-btn:active { transform: scale(0.95); }
 
-#submit-score-btn:active, #restart-button:active, #start-game-btn:active {
-  transform: scale(0.95);
+#room-code-input, #player-name {
+  padding: 12px;
+  font-size: 16px;
+  border: 2px solid #ffb6c1;
+  border-radius: 12px;
+  text-align: center;
+  outline: none;
+  width: 100%;
+  box-sizing: border-box;
+  margin-bottom: 10px;
+}
+
+#room-code-input:focus, #player-name:focus {
+  border-color: #ff69b4;
+}
+
+#submit-score-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 20px;
+  width: 100%;
 }
 
 #submit-score-btn:disabled {
