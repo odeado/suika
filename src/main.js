@@ -76,21 +76,20 @@ const TOP_LIMIT = GAME_HEIGHT * 0.15;
 
 const scaleFactor = GAME_WIDTH / 400;
 
-// Fruit configurations (13 tiers)
 const FRUITS = [
   { name: "Arándano", radius: 12 * scaleFactor, color: '#4d4dff', emoji: '🫐', points: 1 },
-  { name: "Cereza", radius: 18 * scaleFactor, color: '#ff4d4d', emoji: '🍒', points: 3 },
-  { name: "Fresa", radius: 26 * scaleFactor, color: '#ff8888', emoji: '🍓', points: 6 },
-  { name: "Uva", radius: 36 * scaleFactor, color: '#8a2be2', emoji: '🍇', points: 10 },
-  { name: "Limón", radius: 46 * scaleFactor, color: '#fffacd', emoji: '🍋', points: 15 },
-  { name: "Mandarina", radius: 58 * scaleFactor, color: '#ffa500', emoji: '🍊', points: 21 },
-  { name: "Naranja", radius: 72 * scaleFactor, color: '#ff8c00', emoji: '🟠', points: 28 },
-  { name: "Manzana", radius: 88 * scaleFactor, color: '#dc143c', emoji: '🍎', points: 36 },
-  { name: "Durazno", radius: 105 * scaleFactor, color: '#ffb6c1', emoji: '🍑', points: 45 },
-  { name: "Coco", radius: 125 * scaleFactor, color: '#ffffff', emoji: '🥥', points: 55 },
-  { name: "Piña", radius: 150 * scaleFactor, color: '#ffe4b5', emoji: '🍍', points: 66 },
-  { name: "Melón", radius: 175 * scaleFactor, color: '#90ee90', emoji: '🍈', points: 78 },
-  { name: "Sandía", radius: 205 * scaleFactor, color: '#228b22', emoji: '🍉', points: 100 },
+  { name: "Cereza", radius: 16 * scaleFactor, color: '#ff4d4d', emoji: '🍒', points: 3 },
+  { name: "Fresa", radius: 22 * scaleFactor, color: '#ff8888', emoji: '🍓', points: 6 },
+  { name: "Uva", radius: 28 * scaleFactor, color: '#8a2be2', emoji: '🍇', points: 10 },
+  { name: "Limón", radius: 35 * scaleFactor, color: '#fffacd', emoji: '🍋', points: 15 },
+  { name: "Mandarina", radius: 43 * scaleFactor, color: '#ffa500', emoji: '🍊', points: 21 },
+  { name: "Naranja", radius: 52 * scaleFactor, color: '#ff8c00', emoji: '🟠', points: 28 },
+  { name: "Manzana", radius: 62 * scaleFactor, color: '#dc143c', emoji: '🍎', points: 36 },
+  { name: "Durazno", radius: 73 * scaleFactor, color: '#ffb6c1', emoji: '🍑', points: 45 },
+  { name: "Coco", radius: 85 * scaleFactor, color: '#ffffff', emoji: '🥥', points: 55 },
+  { name: "Piña", radius: 100 * scaleFactor, color: '#ffe4b5', emoji: '🍍', points: 66 },
+  { name: "Melón", radius: 118 * scaleFactor, color: '#90ee90', emoji: '🍈', points: 78 },
+  { name: "Sandía", radius: 140 * scaleFactor, color: '#228b22', emoji: '🍉', points: 100 },
 ];
 
 let engine, render, runner;
