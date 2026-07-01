@@ -90,6 +90,13 @@ const FRUITS = [
   { name: "Piña", radius: 100 * scaleFactor, color: '#ffe4b5', emoji: '🍍', points: 66 },
   { name: "Melón", radius: 118 * scaleFactor, color: '#90ee90', emoji: '🍈', points: 78 },
   { name: "Sandía", radius: 140 * scaleFactor, color: '#228b22', emoji: '🍉', points: 100 },
+  { name: "Aguacate", radius: 148 * scaleFactor, color: '#a3e635', emoji: '🥑', points: 130 },
+  { name: "Plátano", radius: 155 * scaleFactor, color: '#fef08a', emoji: '🍌', points: 160 },
+  { name: "Kiwi", radius: 162 * scaleFactor, color: '#84cc16', emoji: '🥝', points: 200 },
+  { name: "Hongo", radius: 168 * scaleFactor, color: '#f87171', emoji: '🍄', points: 250 },
+  { name: "Flor", radius: 174 * scaleFactor, color: '#fbcfe8', emoji: '🌸', points: 300 },
+  { name: "Estrella", radius: 180 * scaleFactor, color: '#fde047', emoji: '⭐️', points: 350 },
+  { name: "Zanahoria", radius: 186 * scaleFactor, color: '#fb923c', emoji: '🥕', points: 400 },
 ];
 
 let engine, render, runner;
