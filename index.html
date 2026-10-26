@@ -1,23 +1,31 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>Suika Game Kawaii</title>
+    <title>Suika Game Kawaii - Frutas & Animalitos</title>
     <link rel="stylesheet" href="/src/style.css" />
   </head>
-  <body>
+  <body class="theme-fruits">
     <div id="game-container">
       <div id="ui-layer">
         <div class="score-container">
-          <div style="font-size: 16px; opacity: 0.8; margin-bottom: 2px;">Puntaje:</div>
+          <div style="font-size: 14px; opacity: 0.85; margin-bottom: 2px;">Puntaje:</div>
           <span id="score">0</span>
           
           <div id="opponent-score-container" class="hidden">
-            <div style="font-size: 14px; opacity: 0.8; margin-top: 10px; color: #ff69b4;">Rival:</div>
+            <div style="font-size: 13px; opacity: 0.85; margin-top: 8px; color: #ff69b4;">Rival:</div>
             <span id="opponent-score" style="color: #ff69b4;">0</span>
           </div>
+        </div>
+
+        <!-- Theme Toggle Button at top center -->
+        <div class="theme-switch-container">
+          <button id="theme-toggle-btn" class="theme-switch-btn" title="Cambiar Tema">
+            <span id="theme-toggle-icon">🐮</span>
+            <span id="theme-toggle-label">Granja</span>
+          </button>
         </div>
 
         <div class="next-fruit-container">
@@ -47,32 +55,47 @@
       </div>
     </div>
 
-    <!-- Start Overlay for Audio Policy and Lobby -->
+    <!-- Start Overlay for Audio Policy, Mode & Theme Selection -->
     <div id="start-screen">
       <div class="start-modal">
-        <h1>🍉 Suika Kawaii</h1>
-        <p style="font-size: 14px; margin-bottom: 15px;">¡Une las frutas para llegar a la gran sandía!</p>
+        <h1 id="start-modal-title">🍉 Suika Kawaii</h1>
+        <p id="start-modal-subtitle" style="font-size: 14px; margin-bottom: 12px;">¡Elige tu tema favorito y fusiona!</p>
         
-        <div id="mode-selection">
-          <button id="play-solo-btn" class="menu-btn">Jugar Solo</button>
+        <!-- Theme Selector Cards -->
+        <div class="theme-cards-container">
+          <button class="theme-card active" data-theme="fruits" id="select-theme-fruits">
+            <div class="theme-card-icon">🍉</div>
+            <div class="theme-card-title">Frutas</div>
+            <div class="theme-card-desc">Playa & Cristal 3D</div>
+          </button>
+          
+          <button class="theme-card" data-theme="animals" id="select-theme-animals">
+            <div class="theme-card-icon">🐮</div>
+            <div class="theme-card-title">Granja</div>
+            <div class="theme-card-desc">Animalitos Kawaii</div>
+          </button>
+        </div>
+
+        <div id="mode-selection" style="width: 100%; margin-top: 10px;">
+          <button id="play-solo-btn" class="menu-btn">Jugar Ahora</button>
           <button id="play-multi-btn" class="menu-btn secondary-btn">Modo Multijugador</button>
         </div>
 
-        <div id="multiplayer-lobby" class="hidden">
+        <div id="multiplayer-lobby" class="hidden" style="width: 100%;">
           <h3>Salas Multijugador</h3>
           <button id="create-room-btn" class="menu-btn">Crear Sala</button>
           
-          <div style="margin: 15px 0;">O</div>
+          <div style="margin: 10px 0; font-weight: bold; color: #64748b;">O</div>
           
           <input type="text" id="room-code-input" placeholder="Ej. A4X9" maxlength="4" style="text-transform: uppercase;"/>
           <button id="join-room-btn" class="menu-btn secondary-btn">Unirse a Sala</button>
-          <button id="back-to-menu-btn" style="margin-top: 15px; font-size: 14px; padding: 5px 10px; background: none; border: none; text-decoration: underline; color: #666; cursor: pointer;">Volver</button>
+          <button id="back-to-menu-btn" style="margin-top: 10px; font-size: 14px; padding: 5px 10px; background: none; border: none; text-decoration: underline; color: #64748b; cursor: pointer;">Volver</button>
         </div>
 
         <div id="waiting-room" class="hidden">
           <h3>Esperando rival...</h3>
           <p>Tu código de sala es:</p>
-          <h2 id="room-code-display" style="letter-spacing: 5px; font-size: 40px; color: #ff69b4; margin: 10px 0;">----</h2>
+          <h2 id="room-code-display" style="letter-spacing: 5px; font-size: 38px; color: #ea580c; margin: 10px 0;">----</h2>
           <p style="font-size: 13px;">Dile a la otra persona que use este código en "Unirse a Sala".</p>
         </div>
 
