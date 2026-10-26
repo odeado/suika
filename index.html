@@ -2,9 +2,16 @@
 <html lang="es">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>Suika Game Kawaii - Frutas & Animalitos</title>
+    <link rel="icon" type="image/png" href="/icon-192.png" />
+    <link rel="apple-touch-icon" href="/icon-192.png" />
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="theme-color" content="#ea580c" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Suika Kawaii" />
+    <title>Suika Kawaii - Frutas, Granja & Halloween</title>
     <link rel="stylesheet" href="/src/style.css" />
   </head>
   <body class="theme-fruits">
@@ -31,6 +38,11 @@
         <div class="next-fruit-container">
           <div id="next-fruit-preview"></div>
         </div>
+
+        <!-- Floating PWA Install button for quick 1-tap install on phone -->
+        <button id="pwa-install-top-btn" class="pwa-install-btn hidden" title="Instalar en el celular">
+          📲 Instalar
+        </button>
       </div>
     </div>
     
@@ -55,28 +67,40 @@
       </div>
     </div>
 
-    <!-- Start Overlay for Audio Policy, Mode & Theme Selection -->
+    <!-- Start Overlay for Audio Policy, Mode, Theme & PWA Install -->
     <div id="start-screen">
       <div class="start-modal">
         <h1 id="start-modal-title">🍉 Suika Kawaii</h1>
-        <p id="start-modal-subtitle" style="font-size: 14px; margin-bottom: 12px;">¡Elige tu tema favorito y fusiona!</p>
+        <p id="start-modal-subtitle" style="font-size: 14px; margin-bottom: 12px;">¡Elige tu tema y fusiona!</p>
         
-        <!-- Theme Selector Cards -->
+        <!-- 3 Theme Selector Cards -->
         <div class="theme-cards-container">
           <button class="theme-card active" data-theme="fruits" id="select-theme-fruits">
             <div class="theme-card-icon">🍉</div>
             <div class="theme-card-title">Frutas</div>
-            <div class="theme-card-desc">Playa & Cristal 3D</div>
+            <div class="theme-card-desc">Playa & Cristal</div>
           </button>
           
           <button class="theme-card" data-theme="animals" id="select-theme-animals">
             <div class="theme-card-icon">🐮</div>
             <div class="theme-card-title">Granja</div>
-            <div class="theme-card-desc">Animalitos Kawaii</div>
+            <div class="theme-card-desc">Animalitos</div>
+          </button>
+
+          <button class="theme-card" data-theme="halloween" id="select-theme-halloween">
+            <div class="theme-card-icon">🎃</div>
+            <div class="theme-card-title">Halloween</div>
+            <div class="theme-card-desc">Fantasmas</div>
           </button>
         </div>
 
-        <div id="mode-selection" style="width: 100%; margin-top: 10px;">
+        <!-- PWA Install button inside modal -->
+        <button id="pwa-install-modal-btn" class="pwa-install-banner-btn hidden">
+          <span>📲 Instalar App en el Celular</span>
+          <span style="font-size: 11px; opacity: 0.85;">Juega sin navegador y a pantalla completa</span>
+        </button>
+
+        <div id="mode-selection" style="width: 100%; margin-top: 6px;">
           <button id="play-solo-btn" class="menu-btn">Jugar Ahora</button>
           <button id="play-multi-btn" class="menu-btn secondary-btn">Modo Multijugador</button>
         </div>

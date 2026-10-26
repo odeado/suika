@@ -2,16 +2,64 @@ import './style.css';
 import Matter from 'matter-js';
 import { saveScore, getTopScores, createRoom, joinRoom, listenToRoom, updateRoomState, sendPunishment } from './firebase.js';
 
-// --- Audio System (Web Audio API) ---
+// --- Register Service Worker for PWA (Offline & Installable) ---
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').then((reg) => {
+      console.log('Service Worker registered successfully:', reg.scope);
+    }).catch((err) => {
+      console.log('Service Worker registration failed:', err);
+    });
+  });
+}
+
+// --- PWA Installation Prompt ---
+let deferredPrompt = null;
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  // Show install buttons
+  const topInstallBtn = document.getElementById('pwa-install-top-btn');
+  const modalInstallBtn = document.getElementById('pwa-install-modal-btn');
+  if (topInstallBtn) topInstallBtn.classList.remove('hidden');
+  if (modalInstallBtn) modalInstallBtn.classList.remove('hidden');
+});
+
+function triggerPWAInstall() {
+  if (deferredPrompt) {
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then((choiceResult) => {
+      if (choiceResult.outcome === 'accepted') {
+        console.log('User accepted the PWA install prompt');
+      }
+      deferredPrompt = null;
+      const topInstallBtn = document.getElementById('pwa-install-top-btn');
+      const modalInstallBtn = document.getElementById('pwa-install-modal-btn');
+      if (topInstallBtn) topInstallBtn.classList.add('hidden');
+      if (modalInstallBtn) modalInstallBtn.classList.add('hidden');
+    });
+  } else {
+    alert("Para instalar en iPhone/iPad: presiona 'Compartir' en Safari y luego 'Agregar a la pantalla principal'. En Android: presiona los 3 puntitos del navegador y 'Instalar App'.");
+  }
+}
+
+// --- Enhanced Audio System (Web Audio API) ---
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
-function playDropSound(isAnimal = false) {
+function playDropSound(theme) {
   if (audioCtx.state === 'suspended') return;
   const now = audioCtx.currentTime;
   const osc = audioCtx.createOscillator();
   const gain = audioCtx.createGain();
   
-  if (isAnimal) {
+  if (theme === 'halloween') {
+    // Spooky eerie chime
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(440, now);
+    osc.frequency.exponentialRampToValueAtTime(220, now + 0.14);
+    gain.gain.setValueAtTime(0.12, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
+  } else if (theme === 'animals') {
     // Cute high-pitch animal squeak/pop
     osc.type = 'triangle';
     osc.frequency.setValueAtTime(480, now);
@@ -32,10 +80,10 @@ function playDropSound(isAnimal = false) {
   osc.connect(gain);
   gain.connect(audioCtx.destination);
   osc.start(now);
-  osc.stop(now + 0.12);
+  osc.stop(now + 0.14);
 }
 
-function playMergeSound(tier, isAnimal = false) {
+function playMergeSound(tier, theme) {
   if (audioCtx.state === 'suspended') return;
   const now = audioCtx.currentTime;
   
@@ -44,16 +92,24 @@ function playMergeSound(tier, isAnimal = false) {
   const osc2 = audioCtx.createOscillator();
   const gain = audioCtx.createGain();
   
-  osc1.type = isAnimal ? 'triangle' : 'sine';
-  osc1.frequency.setValueAtTime(baseFreq, now);
-  osc1.frequency.exponentialRampToValueAtTime(baseFreq * 1.5, now + 0.22);
+  if (theme === 'halloween') {
+    osc1.type = 'sawtooth';
+    osc2.type = 'sine';
+    osc1.frequency.setValueAtTime(baseFreq * 0.8, now);
+    osc1.frequency.exponentialRampToValueAtTime(baseFreq * 1.6, now + 0.28);
+    osc2.frequency.setValueAtTime(baseFreq * 1.2, now);
+    osc2.frequency.exponentialRampToValueAtTime(baseFreq * 2.4, now + 0.28);
+  } else {
+    osc1.type = theme === 'animals' ? 'triangle' : 'sine';
+    osc1.frequency.setValueAtTime(baseFreq, now);
+    osc1.frequency.exponentialRampToValueAtTime(baseFreq * 1.5, now + 0.22);
+    osc2.type = 'triangle';
+    osc2.frequency.setValueAtTime(baseFreq * 2, now);
+    osc2.frequency.exponentialRampToValueAtTime(baseFreq * 2.5, now + 0.25);
+  }
   
-  osc2.type = 'triangle';
-  osc2.frequency.setValueAtTime(baseFreq * 2, now);
-  osc2.frequency.exponentialRampToValueAtTime(baseFreq * 2.5, now + 0.25);
-  
-  gain.gain.setValueAtTime(0.22, now);
-  gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+  gain.gain.setValueAtTime(0.2, now);
+  gain.gain.exponentialRampToValueAtTime(0.001, now + 0.32);
   
   osc1.connect(gain);
   osc2.connect(gain);
@@ -61,8 +117,8 @@ function playMergeSound(tier, isAnimal = false) {
   
   osc1.start(now);
   osc2.start(now);
-  osc1.stop(now + 0.3);
-  osc2.stop(now + 0.3);
+  osc1.stop(now + 0.32);
+  osc2.stop(now + 0.32);
 }
 
 function playImpactSound(intensity = 1) {
@@ -92,7 +148,7 @@ function startBGM() {
   if (bgmInterval) return;
   
   bgmGain = audioCtx.createGain();
-  bgmGain.gain.value = 0.04;
+  bgmGain.gain.value = 0.035;
   bgmGain.connect(audioCtx.destination);
   
   const chords = [
@@ -109,11 +165,11 @@ function startBGM() {
     currentChord.forEach((note, i) => {
       const osc = audioCtx.createOscillator();
       const noteGain = audioCtx.createGain();
-      osc.type = 'sine';
+      osc.type = currentTheme === 'halloween' ? 'triangle' : 'sine';
       osc.frequency.value = note;
       
       const startTime = audioCtx.currentTime + i * 0.06;
-      noteGain.gain.setValueAtTime(0.03, startTime);
+      noteGain.gain.setValueAtTime(0.025, startTime);
       noteGain.gain.exponentialRampToValueAtTime(0.001, startTime + 1.4);
       
       osc.connect(noteGain);
@@ -129,7 +185,6 @@ function startBGM() {
 let GAME_WIDTH = Math.min(window.innerWidth, 500);
 let GAME_HEIGHT = window.innerHeight;
 
-// Boundaries inside the canvas
 const BOX_PADDING_X = Math.max(16, GAME_WIDTH * 0.05);
 const BOX_LEFT = BOX_PADDING_X;
 const BOX_RIGHT = GAME_WIDTH - BOX_PADDING_X;
@@ -141,7 +196,7 @@ const WALL_THICKNESS = 60;
 
 const scaleFactor = Math.min(1.15, Math.max(0.75, BOX_WIDTH / 360));
 
-// --- THEME DEFINITIONS ---
+// --- THEME 1: FRUTAS ---
 const THEME_FRUITS = [
   { name: "Arándano", radius: 13 * scaleFactor, color: '#3b82f6', points: 1 },
   { name: "Cereza", radius: 17 * scaleFactor, color: '#f43f5e', points: 3 },
@@ -165,6 +220,7 @@ const THEME_FRUITS = [
   { name: "Estrella", radius: 173 * scaleFactor, color: '#eab308', points: 370 },
 ];
 
+// --- THEME 2: GRANJA ---
 const THEME_ANIMALS = [
   { name: "Huevo", radius: 12 * scaleFactor, color: '#fef3c7', points: 1 },
   { name: "Pollito", radius: 16 * scaleFactor, color: '#fde047', points: 3 },
@@ -182,10 +238,31 @@ const THEME_ANIMALS = [
   { name: "Ballenita", radius: 148 * scaleFactor, color: '#3b82f6', points: 120 },
 ];
 
-// Active Theme state
-let currentTheme = localStorage.getItem('suika_theme') || 'fruits'; // 'fruits' | 'animals'
+// --- THEME 3: HALLOWEEN ---
+const THEME_HALLOWEEN = [
+  { name: "Caramelo", radius: 12 * scaleFactor, color: '#f97316', points: 1 },
+  { name: "Ojito", radius: 16 * scaleFactor, color: '#e2e8f0', points: 3 },
+  { name: "Arañita", radius: 22 * scaleFactor, color: '#581c87', points: 6 },
+  { name: "Murcielaguito", radius: 29 * scaleFactor, color: '#7c3aed', points: 10 },
+  { name: "Poción Mágica", radius: 37 * scaleFactor, color: '#22c55e', points: 15 },
+  { name: "Fantasmita", radius: 46 * scaleFactor, color: '#f8fafc', points: 21 },
+  { name: "Frankie", radius: 56 * scaleFactor, color: '#86efac', points: 28 },
+  { name: "Brujita", radius: 68 * scaleFactor, color: '#9333ea', points: 36 },
+  { name: "Vampirito", radius: 80 * scaleFactor, color: '#dc2626', points: 45 },
+  { name: "Calaverita", radius: 93 * scaleFactor, color: '#f8fafc', points: 55 },
+  { name: "Gatito Negro", radius: 107 * scaleFactor, color: '#0f172a', points: 66 },
+  { name: "Momia", radius: 121 * scaleFactor, color: '#fef3c7', points: 78 },
+  { name: "Hombre Lobo", radius: 135 * scaleFactor, color: '#64748b', points: 95 },
+  { name: "Gran Calabaza", radius: 148 * scaleFactor, color: '#ea580c', points: 120 },
+];
+
+// Theme state: 'fruits' | 'animals' | 'halloween'
+let currentTheme = localStorage.getItem('suika_theme') || 'fruits';
+
 function getActiveItems() {
-  return currentTheme === 'animals' ? THEME_ANIMALS : THEME_FRUITS;
+  if (currentTheme === 'halloween') return THEME_HALLOWEEN;
+  if (currentTheme === 'animals') return THEME_ANIMALS;
+  return THEME_FRUITS;
 }
 
 let engine, render, runner;
@@ -295,6 +372,7 @@ function init() {
   setupInput();
   setupMultiplayerUI();
   setupThemeControls();
+  setupPWAButtons();
 
   Matter.Render.run(render);
   runner = Matter.Runner.create();
@@ -311,6 +389,9 @@ function applyThemeUI() {
     if (currentTheme === 'fruits') {
       themeToggleIcon.innerText = '🐮';
       themeToggleLabel.innerText = 'Granja';
+    } else if (currentTheme === 'animals') {
+      themeToggleIcon.innerText = '🎃';
+      themeToggleLabel.innerText = 'Halloween';
     } else {
       themeToggleIcon.innerText = '🍉';
       themeToggleLabel.innerText = 'Frutas';
@@ -320,10 +401,10 @@ function applyThemeUI() {
   // Update Start screen active card
   const fruitCard = document.getElementById('select-theme-fruits');
   const animalCard = document.getElementById('select-theme-animals');
-  if (fruitCard && animalCard) {
-    fruitCard.classList.toggle('active', currentTheme === 'fruits');
-    animalCard.classList.toggle('active', currentTheme === 'animals');
-  }
+  const halloweenCard = document.getElementById('select-theme-halloween');
+  if (fruitCard) fruitCard.classList.toggle('active', currentTheme === 'fruits');
+  if (animalCard) animalCard.classList.toggle('active', currentTheme === 'animals');
+  if (halloweenCard) halloweenCard.classList.toggle('active', currentTheme === 'halloween');
 }
 
 function switchTheme(newTheme) {
@@ -336,19 +417,28 @@ function switchTheme(newTheme) {
 function setupThemeControls() {
   if (themeToggleBtn) {
     themeToggleBtn.addEventListener('click', () => {
-      const target = currentTheme === 'fruits' ? 'animals' : 'fruits';
-      switchTheme(target);
+      // Cycle: fruits -> animals -> halloween -> fruits
+      let next = 'fruits';
+      if (currentTheme === 'fruits') next = 'animals';
+      else if (currentTheme === 'animals') next = 'halloween';
+      else next = 'fruits';
+      switchTheme(next);
     });
   }
 
   const fruitCard = document.getElementById('select-theme-fruits');
   const animalCard = document.getElementById('select-theme-animals');
-  if (fruitCard) {
-    fruitCard.addEventListener('click', () => switchTheme('fruits'));
-  }
-  if (animalCard) {
-    animalCard.addEventListener('click', () => switchTheme('animals'));
-  }
+  const halloweenCard = document.getElementById('select-theme-halloween');
+  if (fruitCard) fruitCard.addEventListener('click', () => switchTheme('fruits'));
+  if (animalCard) animalCard.addEventListener('click', () => switchTheme('animals'));
+  if (halloweenCard) halloweenCard.addEventListener('click', () => switchTheme('halloween'));
+}
+
+function setupPWAButtons() {
+  const topInstallBtn = document.getElementById('pwa-install-top-btn');
+  const modalInstallBtn = document.getElementById('pwa-install-modal-btn');
+  if (topInstallBtn) topInstallBtn.addEventListener('click', triggerPWAInstall);
+  if (modalInstallBtn) modalInstallBtn.addEventListener('click', triggerPWAInstall);
 }
 
 // --- Multiplayer Logic ---
@@ -474,7 +564,9 @@ function rollNextFruit() {
   const scale = next.radius > maxR ? maxR / next.radius : 1;
   ctx.scale(scale, scale);
   
-  if (currentTheme === 'animals') {
+  if (currentTheme === 'halloween') {
+    drawHalloweenCreature(ctx, nextFruitTier, next.radius);
+  } else if (currentTheme === 'animals') {
     drawChubbyAnimal(ctx, nextFruitTier, next.radius);
   } else {
     drawJuicyFruit(ctx, nextFruitTier, next.radius);
@@ -518,7 +610,7 @@ function dropCurrentItem() {
   body.blinkTimer = Math.random() * 200 + 100;
   
   Matter.World.add(engine.world, body);
-  playDropSound(currentTheme === 'animals');
+  playDropSound(currentTheme);
   
   isDropping = true;
   setTimeout(() => {
@@ -554,7 +646,6 @@ function handleCollisions(event) {
     const bodyA = pairs[i].bodyA;
     const bodyB = pairs[i].bodyB;
 
-    // Elastic squash on collision
     const relSpeed = Matter.Vector.magnitude(Matter.Vector.sub(bodyA.velocity, bodyB.velocity));
     if (relSpeed > 1.8) {
       const impactAngle = Math.atan2(bodyB.position.y - bodyA.position.y, bodyB.position.x - bodyA.position.x);
@@ -571,7 +662,6 @@ function handleCollisions(event) {
       if (relSpeed > 3.5) playImpactSound(relSpeed * 0.2);
     }
 
-    // Merge logic
     if (bodyA.fruitTier !== undefined && bodyB.fruitTier !== undefined) {
       if (bodyA.fruitTier === bodyB.fruitTier) {
         if (bodyA.fruitTier === activeItems.length - 1) continue;
@@ -599,7 +689,7 @@ function handleCollisions(event) {
           newBody.blinkTimer = Math.random() * 200 + 100;
 
           Matter.World.add(engine.world, newBody);
-          playMergeSound(nextTier, currentTheme === 'animals');
+          playMergeSound(nextTier, currentTheme);
           
           spawnMergeVFX(newX, newY, newConfig);
           
@@ -617,19 +707,24 @@ function handleCollisions(event) {
 
 // --- Particle & VFX Engine ---
 function spawnMergeVFX(x, y, config) {
-  // 1. Shockwave Ring
+  // Shockwave Ring
   shockwaves.push({
     x, y,
     radius: config.radius * 0.6,
     maxRadius: config.radius * 2.2,
     alpha: 0.9,
-    color: currentTheme === 'animals' ? '#fef08a' : '#ffffff'
+    color: currentTheme === 'halloween' ? '#c084fc' : (currentTheme === 'animals' ? '#fef08a' : '#ffffff')
   });
 
-  // 2. Cloud Puffs / Wool Feathers
-  const puffColors = currentTheme === 'animals'
-    ? ['#fef08a', '#fde047', '#fed7aa', '#f8fafc', '#bbf7d0']
-    : ['#f472b6', '#fb7185', '#fda4af', '#fbcfe8', '#a7f3d0'];
+  // Cloud / Spooky Puffs
+  let puffColors;
+  if (currentTheme === 'halloween') {
+    puffColors = ['#a855f7', '#c084fc', '#f97316', '#fb923c', '#4ade80'];
+  } else if (currentTheme === 'animals') {
+    puffColors = ['#fef08a', '#fde047', '#fed7aa', '#f8fafc', '#bbf7d0'];
+  } else {
+    puffColors = ['#f472b6', '#fb7185', '#fda4af', '#fbcfe8', '#a7f3d0'];
+  }
 
   for (let i = 0; i < 14; i++) {
     const angle = (Math.PI * 2 * i) / 14 + (Math.random() - 0.5) * 0.4;
@@ -647,7 +742,7 @@ function spawnMergeVFX(x, y, config) {
     });
   }
 
-  // 3. Stars / Leaves
+  // Sparkles
   for (let i = 0; i < 8; i++) {
     const angle = Math.random() * Math.PI * 2;
     const speed = Math.random() * 4 + 1.5;
@@ -659,14 +754,14 @@ function spawnMergeVFX(x, y, config) {
       rot: Math.random() * Math.PI,
       vRot: (Math.random() - 0.5) * 0.2,
       size: Math.random() * 7 + 5,
-      color: currentTheme === 'animals' ? '#fbbf24' : '#4ade80',
+      color: currentTheme === 'halloween' ? '#c084fc' : (currentTheme === 'animals' ? '#fbbf24' : '#4ade80'),
       alpha: 1,
       life: 0,
       maxLife: Math.random() * 20 + 25
     });
   }
 
-  // 4. Floating +Points Text
+  // Floating Points
   floatingTexts.push({
     x, y: y - config.radius * 0.5,
     text: `+${config.points}`,
@@ -679,7 +774,6 @@ function spawnMergeVFX(x, y, config) {
 }
 
 function updateAndDrawVFX(ctx) {
-  // Shockwaves
   for (let i = shockwaves.length - 1; i >= 0; i--) {
     const s = shockwaves[i];
     s.radius += (s.maxRadius - s.radius) * 0.18;
@@ -698,7 +792,6 @@ function updateAndDrawVFX(ctx) {
     if (s.alpha < 0.05) shockwaves.splice(i, 1);
   }
 
-  // Particles
   for (let i = particles.length - 1; i >= 0; i--) {
     const p = particles[i];
     p.life++;
@@ -735,7 +828,6 @@ function updateAndDrawVFX(ctx) {
     if (p.life >= p.maxLife) particles.splice(i, 1);
   }
 
-  // Floating text
   for (let i = floatingTexts.length - 1; i >= 0; i--) {
     const ft = floatingTexts[i];
     ft.life++;
@@ -753,7 +845,7 @@ function updateAndDrawVFX(ctx) {
     ctx.strokeStyle = '#ffffff';
     ctx.lineWidth = 4;
     ctx.strokeText(ft.text, 0, 0);
-    ctx.fillStyle = currentTheme === 'animals' ? '#b45309' : '#ea580c';
+    ctx.fillStyle = currentTheme === 'halloween' ? '#a855f7' : (currentTheme === 'animals' ? '#b45309' : '#ea580c');
     ctx.fillText(ft.text, 0, 0);
     ctx.restore();
 
@@ -761,25 +853,55 @@ function updateAndDrawVFX(ctx) {
   }
 }
 
-// --- Container Rendering: Glass (Fruits) vs Rustic Wood (Animals) ---
+// --- Container Rendering ---
 function drawContainer(ctx) {
   ctx.save();
 
-  if (currentTheme === 'animals') {
-    // 3D Rustic Farm Wooden Pen (Matching the screenshots!)
+  if (currentTheme === 'halloween') {
+    // Spooky Gothic Obsidian Glass Container
+    const boxHeight = BOX_BOTTOM - TOP_LIMIT;
+    const grad = ctx.createLinearGradient(0, TOP_LIMIT, 0, BOX_BOTTOM);
+    grad.addColorStop(0, 'rgba(88, 28, 135, 0.35)');
+    grad.addColorStop(0.5, 'rgba(15, 23, 42, 0.25)');
+    grad.addColorStop(1, 'rgba(126, 34, 206, 0.35)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(BOX_LEFT, TOP_LIMIT, BOX_WIDTH, boxHeight);
+
+    // Glowing Neon Violet/Green Bevels
+    ctx.beginPath();
+    ctx.moveTo(BOX_LEFT, TOP_LIMIT);
+    ctx.lineTo(BOX_LEFT, BOX_BOTTOM);
+    ctx.lineTo(BOX_RIGHT, BOX_BOTTOM);
+    ctx.lineTo(BOX_RIGHT, TOP_LIMIT);
+    ctx.strokeStyle = 'rgba(192, 132, 252, 0.85)';
+    ctx.lineWidth = 4;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.shadowColor = '#a855f7';
+    ctx.shadowBlur = 12;
+    ctx.stroke();
+
+    // Subtle Cobweb in top-left corner
+    ctx.beginPath();
+    ctx.moveTo(BOX_LEFT + 2, TOP_LIMIT + 35);
+    ctx.lineTo(BOX_LEFT + 35, TOP_LIMIT + 2);
+    ctx.moveTo(BOX_LEFT + 2, TOP_LIMIT + 20);
+    ctx.lineTo(BOX_LEFT + 20, TOP_LIMIT + 2);
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+  } else if (currentTheme === 'animals') {
+    // 3D Rustic Farm Wooden Pen
     const postWidth = 18;
     const postHeight = BOX_BOTTOM - TOP_LIMIT + 20;
 
-    // Soft grassy transparent back
     ctx.fillStyle = 'rgba(255, 255, 255, 0.06)';
     ctx.fillRect(BOX_LEFT, TOP_LIMIT, BOX_WIDTH, BOX_BOTTOM - TOP_LIMIT);
 
-    // Left Wooden Beam Post
     drawWoodPost(ctx, BOX_LEFT - postWidth / 2, TOP_LIMIT - 10, postWidth, postHeight);
-    // Right Wooden Beam Post
     drawWoodPost(ctx, BOX_RIGHT - postWidth / 2, TOP_LIMIT - 10, postWidth, postHeight);
 
-    // Bottom Wooden Sill/Beam
     ctx.fillStyle = '#92400e';
     ctx.strokeStyle = '#78350f';
     ctx.lineWidth = 3;
@@ -788,7 +910,6 @@ function drawContainer(ctx) {
     ctx.fill();
     ctx.stroke();
 
-    // Wood plank highlight
     ctx.fillStyle = 'rgba(254, 215, 170, 0.35)';
     ctx.fillRect(BOX_LEFT - 4, BOX_BOTTOM - 2, BOX_WIDTH + 8, 4);
 
@@ -855,7 +976,7 @@ function drawContainer(ctx) {
     ctx.moveTo(BOX_LEFT + 6, TOP_LIMIT);
     ctx.lineTo(BOX_RIGHT - 6, TOP_LIMIT);
     ctx.setLineDash([8, 8]);
-    ctx.strokeStyle = currentTheme === 'animals' ? `rgba(217, 119, 6, ${pulse})` : `rgba(244, 63, 94, ${pulse})`;
+    ctx.strokeStyle = currentTheme === 'halloween' ? `rgba(249, 115, 22, ${pulse})` : (currentTheme === 'animals' ? `rgba(217, 119, 6, ${pulse})` : `rgba(244, 63, 94, ${pulse})`);
     ctx.lineWidth = 2.5;
     ctx.stroke();
     ctx.setLineDash([]);
@@ -866,7 +987,6 @@ function drawContainer(ctx) {
 
 function drawWoodPost(ctx, x, y, w, h) {
   ctx.save();
-  // Main post
   const woodGrad = ctx.createLinearGradient(x, 0, x + w, 0);
   woodGrad.addColorStop(0, '#78350f');
   woodGrad.addColorStop(0.35, '#b45309');
@@ -881,7 +1001,6 @@ function drawWoodPost(ctx, x, y, w, h) {
   ctx.fill();
   ctx.stroke();
 
-  // Beveled top cap
   ctx.fillStyle = '#b45309';
   ctx.beginPath();
   ctx.moveTo(x - 3, y);
@@ -902,7 +1021,6 @@ function drawAimingGuide(ctx) {
   const currentConfig = activeItems[nextFruitTier] || activeItems[0];
   const clampedAimX = Math.max(BOX_LEFT + currentConfig.radius + 2, Math.min(aimX, BOX_RIGHT - currentConfig.radius - 2));
   
-  // Find obstacle/highest item underneath
   const bodies = Matter.Composite.allBodies(engine.world);
   let stopY = BOX_BOTTOM;
   for (let b of bodies) {
@@ -919,14 +1037,13 @@ function drawAimingGuide(ctx) {
   }
 
   ctx.save();
-  // 1. Dashed Aim Line
   ctx.beginPath();
   ctx.moveTo(clampedAimX, AIM_Y + currentConfig.radius);
   ctx.lineTo(clampedAimX, stopY);
   ctx.setLineDash([8, 8]);
-  ctx.strokeStyle = currentTheme === 'animals' ? 'rgba(251, 191, 36, 0.95)' : 'rgba(254, 240, 138, 0.9)';
+  ctx.strokeStyle = currentTheme === 'halloween' ? 'rgba(192, 132, 252, 0.95)' : (currentTheme === 'animals' ? 'rgba(251, 191, 36, 0.95)' : 'rgba(254, 240, 138, 0.9)');
   ctx.lineWidth = 3;
-  ctx.shadowColor = 'rgba(234, 179, 8, 0.6)';
+  ctx.shadowColor = currentTheme === 'halloween' ? '#a855f7' : '#eab308';
   ctx.shadowBlur = 6;
   ctx.stroke();
   ctx.setLineDash([]);
@@ -934,14 +1051,16 @@ function drawAimingGuide(ctx) {
   // Landing ghost target circle
   ctx.beginPath();
   ctx.arc(clampedAimX, stopY - currentConfig.radius * 0.3, currentConfig.radius * 0.4, 0, Math.PI * 2);
-  ctx.fillStyle = 'rgba(254, 240, 138, 0.35)';
+  ctx.fillStyle = currentTheme === 'halloween' ? 'rgba(192, 132, 252, 0.35)' : 'rgba(254, 240, 138, 0.35)';
   ctx.fill();
 
-  // 2. Hovering Item at top of container
+  // Hovering Item
   const bobbing = Math.sin(Date.now() * 0.006) * 3;
   ctx.translate(clampedAimX, AIM_Y + bobbing);
   
-  if (currentTheme === 'animals') {
+  if (currentTheme === 'halloween') {
+    drawHalloweenCreature(ctx, nextFruitTier, currentConfig.radius);
+  } else if (currentTheme === 'animals') {
     drawChubbyAnimal(ctx, nextFruitTier, currentConfig.radius);
   } else {
     drawJuicyFruit(ctx, nextFruitTier, currentConfig.radius);
@@ -964,20 +1083,20 @@ function drawJuicyFruit(ctx, tier, radius, options = {}) {
 
   const bodyGrad = ctx.createRadialGradient(-r * 0.35, -r * 0.35, r * 0.08, 0, 0, r);
   const tierGradients = [
-    ['#93c5fd', '#3b82f6', '#1d4ed8', '#172554'], // 0. Arándano
-    ['#fca5a5', '#f43f5e', '#be123c', '#881337'], // 1. Cereza
-    ['#fecdd3', '#fb7185', '#e11d48', '#9f1239'], // 2. Fresa
-    ['#e9d5ff', '#c084fc', '#9333ea', '#581c87'], // 3. Uva
-    ['#fef9c3', '#facc15', '#ca8a04', '#713f12'], // 4. Limón
-    ['#ffedd5', '#fb923c', '#ea580c', '#9a3412'], // 5. Mandarina
-    ['#fed7aa', '#f97316', '#c2410c', '#7c2d12'], // 6. Naranja
-    ['#ecfccb', '#a3e635', '#65a30d', '#365314'], // 7. Manzana Verde
-    ['#fce7f3', '#f472b6', '#db2777', '#831843'], // 8. Durazno
-    ['#fdf2f8', '#ec4899', '#be185d', '#70072b'], // 9. Pitahaya
-    ['#fef3c7', '#d97706', '#92400e', '#451a03'], // 10. Coco
-    ['#fef08a', '#eab308', '#ca8a04', '#713f12'], // 11. Piña
-    ['#d1fae5', '#34d399', '#059669', '#064e3b'], // 12. Melón
-    ['#bbf7d0', '#22c55e', '#15803d', '#14532d'], // 13. Sandía
+    ['#93c5fd', '#3b82f6', '#1d4ed8', '#172554'],
+    ['#fca5a5', '#f43f5e', '#be123c', '#881337'],
+    ['#fecdd3', '#fb7185', '#e11d48', '#9f1239'],
+    ['#e9d5ff', '#c084fc', '#9333ea', '#581c87'],
+    ['#fef9c3', '#facc15', '#ca8a04', '#713f12'],
+    ['#ffedd5', '#fb923c', '#ea580c', '#9a3412'],
+    ['#fed7aa', '#f97316', '#c2410c', '#7c2d12'],
+    ['#ecfccb', '#a3e635', '#65a30d', '#365314'],
+    ['#fce7f3', '#f472b6', '#db2777', '#831843'],
+    ['#fdf2f8', '#ec4899', '#be185d', '#70072b'],
+    ['#fef3c7', '#d97706', '#92400e', '#451a03'],
+    ['#fef08a', '#eab308', '#ca8a04', '#713f12'],
+    ['#d1fae5', '#34d399', '#059669', '#064e3b'],
+    ['#bbf7d0', '#22c55e', '#15803d', '#14532d'],
   ];
 
   const colors = tierGradients[tier] || ['#fef08a', config.color, '#ea580c', '#7c2d12'];
@@ -998,7 +1117,6 @@ function drawJuicyFruit(ctx, tier, radius, options = {}) {
   drawFruitDetails(ctx, tier, r);
   drawAnimeFace(ctx, tier, r, options.blink);
 
-  // Glossy Specular Arc
   ctx.save();
   ctx.beginPath();
   ctx.rotate(-Math.PI / 4.2);
@@ -1011,7 +1129,6 @@ function drawJuicyFruit(ctx, tier, radius, options = {}) {
   ctx.fill();
   ctx.restore();
 
-  // Secondary sparkle dot
   ctx.beginPath();
   ctx.arc(-r * 0.52, -r * 0.2, Math.max(1.8, r * 0.08), 0, Math.PI * 2);
   ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
@@ -1022,7 +1139,6 @@ function drawJuicyFruit(ctx, tier, radius, options = {}) {
 
 function drawFruitDetails(ctx, tier, r) {
   if (tier === 5) {
-    // Mandarina: 5-point star calyx with leaves on top
     ctx.save();
     ctx.translate(0, -r * 0.92);
     ctx.fillStyle = '#4ade80';
@@ -1038,7 +1154,6 @@ function drawFruitDetails(ctx, tier, r) {
     ctx.fill();
     ctx.restore();
   } else if (tier === 7) {
-    // Green Apple: wood stem + leaf
     ctx.save();
     ctx.translate(0, -r * 0.9);
     ctx.strokeStyle = '#78350f';
@@ -1054,7 +1169,6 @@ function drawFruitDetails(ctx, tier, r) {
     ctx.fill();
     ctx.restore();
   } else if (tier === 8) {
-    // Peach: cleft & leaves
     ctx.save();
     ctx.strokeStyle = 'rgba(190, 24, 93, 0.4)';
     ctx.lineWidth = Math.max(1.5, r * 0.06);
@@ -1069,7 +1183,6 @@ function drawFruitDetails(ctx, tier, r) {
     ctx.fill();
     ctx.restore();
   } else if (tier === 9) {
-    // Dragonfruit: green scales
     ctx.save();
     ctx.fillStyle = '#4ade80';
     const scaleAngles = [-Math.PI * 0.8, -Math.PI * 0.2, -Math.PI * 0.5, Math.PI * 0.75, Math.PI * 0.25];
@@ -1085,7 +1198,6 @@ function drawFruitDetails(ctx, tier, r) {
     });
     ctx.restore();
   } else if (tier === 13) {
-    // Watermelon: dark green stripes
     ctx.save();
     ctx.strokeStyle = 'rgba(20, 83, 45, 0.65)';
     ctx.lineWidth = r * 0.12;
@@ -1099,7 +1211,6 @@ function drawFruitDetails(ctx, tier, r) {
     }
     ctx.restore();
   } else if (tier === 2) {
-    // Strawberry: golden seeds + leafy crown
     ctx.save();
     ctx.fillStyle = 'rgba(254, 240, 138, 0.75)';
     [[-0.4, -0.3], [0.4, -0.3], [0, -0.1], [-0.5, 0.2], [0.5, 0.2], [0, 0.4]].forEach(([sx, sy]) => {
@@ -1124,13 +1235,12 @@ function drawFruitDetails(ctx, tier, r) {
 function drawChubbyAnimal(ctx, tier, radius, options = {}) {
   const r = radius;
   ctx.save();
-
   ctx.shadowColor = 'rgba(0, 0, 0, 0.15)';
   ctx.shadowBlur = Math.max(3, r * 0.18);
   ctx.shadowOffsetY = Math.max(2, r * 0.08);
 
-  // 0: Huevo (Egg)
   if (tier === 0) {
+    // Huevo (Egg)
     ctx.beginPath();
     ctx.ellipse(0, 0, r * 0.88, r * 1.05, 0, 0, Math.PI * 2);
     const grad = ctx.createRadialGradient(-r * 0.3, -r * 0.4, r * 0.1, 0, 0, r);
@@ -1141,10 +1251,8 @@ function drawChubbyAnimal(ctx, tier, radius, options = {}) {
     ctx.fill();
     ctx.shadowColor = 'transparent';
     drawBasicAnimalFace(ctx, r, { blush: true, isBlinking: options.blink });
-  }
-
-  // 1: Pollito (Baby Chick)
-  else if (tier === 1) {
+  } else if (tier === 1) {
+    // Pollito (Chick)
     ctx.beginPath();
     ctx.arc(0, 0, r, 0, Math.PI * 2);
     const grad = ctx.createRadialGradient(-r * 0.3, -r * 0.3, r * 0.1, 0, 0, r);
@@ -1155,7 +1263,6 @@ function drawChubbyAnimal(ctx, tier, radius, options = {}) {
     ctx.fill();
     ctx.shadowColor = 'transparent';
 
-    // Little wings on sides
     ctx.fillStyle = '#facc15';
     ctx.beginPath();
     ctx.ellipse(-r * 0.88, r * 0.1, r * 0.22, r * 0.35, -Math.PI / 6, 0, Math.PI * 2);
@@ -1164,7 +1271,6 @@ function drawChubbyAnimal(ctx, tier, radius, options = {}) {
     ctx.ellipse(r * 0.88, r * 0.1, r * 0.22, r * 0.35, Math.PI / 6, 0, Math.PI * 2);
     ctx.fill();
 
-    // Cute orange beak
     ctx.fillStyle = '#f97316';
     ctx.beginPath();
     ctx.moveTo(-r * 0.14, r * 0.06);
@@ -1174,11 +1280,8 @@ function drawChubbyAnimal(ctx, tier, radius, options = {}) {
     ctx.fill();
 
     drawBasicAnimalFace(ctx, r, { eyesOnly: true, isBlinking: options.blink });
-  }
-
-  // 2: Conejito (White Bunny)
-  else if (tier === 2) {
-    // Upright bunny ears
+  } else if (tier === 2) {
+    // Conejito (Bunny)
     ctx.fillStyle = '#ffffff';
     ctx.strokeStyle = '#e2e8f0';
     ctx.lineWidth = 1.5;
@@ -1187,7 +1290,6 @@ function drawChubbyAnimal(ctx, tier, radius, options = {}) {
       ctx.ellipse(ex, -r * 0.95, r * 0.2, r * 0.45, (ex < 0 ? -0.1 : 0.1), 0, Math.PI * 2);
       ctx.fill();
       ctx.stroke();
-      // Pink inner ear
       ctx.fillStyle = '#fbcfe8';
       ctx.beginPath();
       ctx.ellipse(ex, -r * 0.95, r * 0.1, r * 0.32, (ex < 0 ? -0.1 : 0.1), 0, Math.PI * 2);
@@ -1195,7 +1297,6 @@ function drawChubbyAnimal(ctx, tier, radius, options = {}) {
       ctx.fillStyle = '#ffffff';
     });
 
-    // Body
     ctx.beginPath();
     ctx.arc(0, 0, r, 0, Math.PI * 2);
     const grad = ctx.createRadialGradient(-r * 0.3, -r * 0.3, r * 0.1, 0, 0, r);
@@ -1206,18 +1307,14 @@ function drawChubbyAnimal(ctx, tier, radius, options = {}) {
     ctx.fill();
     ctx.shadowColor = 'transparent';
 
-    // Pink nose
     ctx.fillStyle = '#f472b6';
     ctx.beginPath();
     ctx.arc(0, r * 0.08, r * 0.08, 0, Math.PI * 2);
     ctx.fill();
 
     drawBasicAnimalFace(ctx, r, { blush: true, isBlinking: options.blink });
-  }
-
-  // 3: Gallina (Hen)
-  else if (tier === 3) {
-    // Red comb on top
+  } else if (tier === 3) {
+    // Gallina (Hen)
     ctx.fillStyle = '#ef4444';
     [-r * 0.2, 0, r * 0.2].forEach((cx, idx) => {
       ctx.beginPath();
@@ -1225,7 +1322,6 @@ function drawChubbyAnimal(ctx, tier, radius, options = {}) {
       ctx.fill();
     });
 
-    // Body
     ctx.beginPath();
     ctx.arc(0, 0, r, 0, Math.PI * 2);
     const grad = ctx.createRadialGradient(-r * 0.3, -r * 0.3, r * 0.1, 0, 0, r);
@@ -1236,7 +1332,6 @@ function drawChubbyAnimal(ctx, tier, radius, options = {}) {
     ctx.fill();
     ctx.shadowColor = 'transparent';
 
-    // Yellow beak & red wattle
     ctx.fillStyle = '#ef4444';
     ctx.beginPath();
     ctx.ellipse(0, r * 0.28, r * 0.1, r * 0.16, 0, 0, Math.PI * 2);
@@ -1251,11 +1346,8 @@ function drawChubbyAnimal(ctx, tier, radius, options = {}) {
     ctx.fill();
 
     drawBasicAnimalFace(ctx, r, { eyesOnly: true, isBlinking: options.blink });
-  }
-
-  // 4: Chanchito (Piglet)
-  else if (tier === 4) {
-    // Floppy ears
+  } else if (tier === 4) {
+    // Chanchito (Piglet)
     ctx.fillStyle = '#f472b6';
     [-r * 0.7, r * 0.7].forEach(ex => {
       ctx.beginPath();
@@ -1263,7 +1355,6 @@ function drawChubbyAnimal(ctx, tier, radius, options = {}) {
       ctx.fill();
     });
 
-    // Body
     ctx.beginPath();
     ctx.arc(0, 0, r, 0, Math.PI * 2);
     const grad = ctx.createRadialGradient(-r * 0.3, -r * 0.3, r * 0.1, 0, 0, r);
@@ -1274,7 +1365,6 @@ function drawChubbyAnimal(ctx, tier, radius, options = {}) {
     ctx.fill();
     ctx.shadowColor = 'transparent';
 
-    // Pig snout
     ctx.fillStyle = '#ec4899';
     ctx.strokeStyle = '#be185d';
     ctx.lineWidth = 2;
@@ -1283,7 +1373,6 @@ function drawChubbyAnimal(ctx, tier, radius, options = {}) {
     ctx.fill();
     ctx.stroke();
 
-    // Nostrils
     ctx.fillStyle = '#9d174d';
     [-r * 0.12, r * 0.12].forEach(nx => {
       ctx.beginPath();
@@ -1292,11 +1381,8 @@ function drawChubbyAnimal(ctx, tier, radius, options = {}) {
     });
 
     drawBasicAnimalFace(ctx, r, { blush: true, isBlinking: options.blink });
-  }
-
-  // 5: Perrito Husky (Husky Dog)
-  else if (tier === 5) {
-    // Pointed ears
+  } else if (tier === 5) {
+    // Perrito Husky
     [-r * 0.55, r * 0.55].forEach(ex => {
       ctx.fillStyle = '#1e293b';
       ctx.beginPath();
@@ -1305,7 +1391,6 @@ function drawChubbyAnimal(ctx, tier, radius, options = {}) {
       ctx.lineTo(ex + r * 0.2, -r * 0.6);
       ctx.closePath();
       ctx.fill();
-      // Pink inner ear
       ctx.fillStyle = '#f472b6';
       ctx.beginPath();
       ctx.moveTo(ex - r * 0.1, -r * 0.65);
@@ -1315,20 +1400,17 @@ function drawChubbyAnimal(ctx, tier, radius, options = {}) {
       ctx.fill();
     });
 
-    // Dark grey/black head
     ctx.beginPath();
     ctx.arc(0, 0, r, 0, Math.PI * 2);
     ctx.fillStyle = '#334155';
     ctx.fill();
     ctx.shadowColor = 'transparent';
 
-    // Husky white face mask
     ctx.fillStyle = '#ffffff';
     ctx.beginPath();
     ctx.ellipse(0, r * 0.18, r * 0.75, r * 0.65, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // Forehead white blaze
     ctx.beginPath();
     ctx.moveTo(0, -r * 0.7);
     ctx.lineTo(-r * 0.16, r * 0.05);
@@ -1336,24 +1418,19 @@ function drawChubbyAnimal(ctx, tier, radius, options = {}) {
     ctx.closePath();
     ctx.fill();
 
-    // Black nose & smile
     ctx.fillStyle = '#0f172a';
     ctx.beginPath();
     ctx.ellipse(0, r * 0.06, r * 0.12, r * 0.08, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // Tongue
     ctx.fillStyle = '#f43f5e';
     ctx.beginPath();
     ctx.arc(0, r * 0.26, r * 0.09, 0, Math.PI);
     ctx.fill();
 
     drawBasicAnimalFace(ctx, r, { eyesOnly: true, isBlinking: options.blink });
-  }
-
-  // 6: Ovejita (Sheep)
-  else if (tier === 6) {
-    // Cloud of fluffy wool puffs all around
+  } else if (tier === 6) {
+    // Ovejita (Sheep)
     ctx.fillStyle = '#f8fafc';
     const puffCount = 10;
     for (let i = 0; i < puffCount; i++) {
@@ -1365,20 +1442,17 @@ function drawChubbyAnimal(ctx, tier, radius, options = {}) {
       ctx.fill();
     }
 
-    // Inner body
     ctx.beginPath();
     ctx.arc(0, 0, r * 0.85, 0, Math.PI * 2);
     ctx.fillStyle = '#f1f5f9';
     ctx.fill();
     ctx.shadowColor = 'transparent';
 
-    // Face oval
     ctx.fillStyle = '#fde68a';
     ctx.beginPath();
     ctx.ellipse(0, r * 0.06, r * 0.48, r * 0.38, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // Drooping ears
     [-r * 0.55, r * 0.55].forEach(ex => {
       ctx.beginPath();
       ctx.ellipse(ex, -r * 0.05, r * 0.22, r * 0.12, (ex < 0 ? 0.3 : -0.3), 0, Math.PI * 2);
@@ -1386,11 +1460,8 @@ function drawChubbyAnimal(ctx, tier, radius, options = {}) {
     });
 
     drawBasicAnimalFace(ctx, r * 0.85, { blush: true, isBlinking: options.blink });
-  }
-
-  // 7: Vaquita (Cow)
-  else if (tier === 7) {
-    // Little horns
+  } else if (tier === 7) {
+    // Vaquita (Cow)
     ctx.fillStyle = '#fde047';
     [-r * 0.4, r * 0.4].forEach(hx => {
       ctx.beginPath();
@@ -1398,14 +1469,12 @@ function drawChubbyAnimal(ctx, tier, radius, options = {}) {
       ctx.fill();
     });
 
-    // White body
     ctx.beginPath();
     ctx.arc(0, 0, r, 0, Math.PI * 2);
     ctx.fillStyle = '#ffffff';
     ctx.fill();
     ctx.shadowColor = 'transparent';
 
-    // Dairy black patches
     ctx.fillStyle = '#1e293b';
     ctx.beginPath();
     ctx.arc(-r * 0.55, -r * 0.35, r * 0.36, 0, Math.PI * 2);
@@ -1414,7 +1483,6 @@ function drawChubbyAnimal(ctx, tier, radius, options = {}) {
     ctx.arc(r * 0.6, r * 0.25, r * 0.3, 0, Math.PI * 2);
     ctx.fill();
 
-    // Pink cow muzzle
     ctx.fillStyle = '#fbcfe8';
     ctx.strokeStyle = '#f472b6';
     ctx.lineWidth = 2;
@@ -1423,7 +1491,6 @@ function drawChubbyAnimal(ctx, tier, radius, options = {}) {
     ctx.fill();
     ctx.stroke();
 
-    // Nostrils
     ctx.fillStyle = '#db2777';
     [-r * 0.15, r * 0.15].forEach(nx => {
       ctx.beginPath();
@@ -1432,11 +1499,8 @@ function drawChubbyAnimal(ctx, tier, radius, options = {}) {
     });
 
     drawBasicAnimalFace(ctx, r, { eyesOnly: true, isBlinking: options.blink });
-  }
-
-  // 8: Caballito (Horse)
-  else if (tier === 8) {
-    // Dark mane on top
+  } else if (tier === 8) {
+    // Caballito (Horse)
     ctx.fillStyle = '#451a03';
     [-r * 0.2, 0, r * 0.2].forEach(mx => {
       ctx.beginPath();
@@ -1444,7 +1508,6 @@ function drawChubbyAnimal(ctx, tier, radius, options = {}) {
       ctx.fill();
     });
 
-    // Chestnut brown body
     ctx.beginPath();
     ctx.arc(0, 0, r, 0, Math.PI * 2);
     const grad = ctx.createRadialGradient(-r * 0.3, -r * 0.3, r * 0.1, 0, 0, r);
@@ -1455,19 +1518,16 @@ function drawChubbyAnimal(ctx, tier, radius, options = {}) {
     ctx.fill();
     ctx.shadowColor = 'transparent';
 
-    // White star blaze on forehead
     ctx.fillStyle = '#ffffff';
     ctx.beginPath();
     ctx.ellipse(0, -r * 0.25, r * 0.14, r * 0.22, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // Soft muzzle
     ctx.fillStyle = '#fed7aa';
     ctx.beginPath();
     ctx.ellipse(0, r * 0.22, r * 0.42, r * 0.25, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // Nostrils
     ctx.fillStyle = '#78350f';
     [-r * 0.16, r * 0.16].forEach(nx => {
       ctx.beginPath();
@@ -1476,10 +1536,8 @@ function drawChubbyAnimal(ctx, tier, radius, options = {}) {
     });
 
     drawBasicAnimalFace(ctx, r, { eyesOnly: true, isBlinking: options.blink });
-  }
-
-  // 9+: Generic Chubby Animals (Alpaca, Bear, Lion, etc.)
-  else {
+  } else {
+    // Generic cute round animals
     ctx.beginPath();
     ctx.arc(0, 0, r, 0, Math.PI * 2);
     const config = THEME_ANIMALS[tier] || THEME_ANIMALS[0];
@@ -1491,7 +1549,6 @@ function drawChubbyAnimal(ctx, tier, radius, options = {}) {
     ctx.fill();
     ctx.shadowColor = 'transparent';
 
-    // Cute ears
     [-r * 0.65, r * 0.65].forEach(ex => {
       ctx.fillStyle = config.color;
       ctx.beginPath();
@@ -1502,7 +1559,7 @@ function drawChubbyAnimal(ctx, tier, radius, options = {}) {
     drawBasicAnimalFace(ctx, r, { blush: true, isBlinking: options.blink });
   }
 
-  // Specular sheen for cute 3D toy look
+  // Specular sheen
   ctx.save();
   ctx.beginPath();
   ctx.rotate(-Math.PI / 4.2);
@@ -1530,7 +1587,6 @@ function drawBasicAnimalFace(ctx, r, { blush = false, eyesOnly = false, isBlinki
     });
   }
 
-  // Eyes
   if (isBlinking) {
     ctx.strokeStyle = '#1e293b';
     ctx.lineWidth = Math.max(2, r * 0.08);
@@ -1546,7 +1602,6 @@ function drawBasicAnimalFace(ctx, r, { blush = false, eyesOnly = false, isBlinki
       ctx.beginPath();
       ctx.ellipse(ex, eyeY, eyeR, eyeR * 1.15, 0, 0, Math.PI * 2);
       ctx.fill();
-      // Catchlights
       ctx.fillStyle = '#ffffff';
       ctx.beginPath();
       ctx.arc(ex - eyeR * 0.3, eyeY - eyeR * 0.35, eyeR * 0.42, 0, Math.PI * 2);
@@ -1557,7 +1612,6 @@ function drawBasicAnimalFace(ctx, r, { blush = false, eyesOnly = false, isBlinki
     });
   }
 
-  // Cute mouth if not eyesOnly
   if (!eyesOnly) {
     ctx.strokeStyle = '#1e293b';
     ctx.lineWidth = Math.max(1.8, r * 0.06);
@@ -1566,6 +1620,296 @@ function drawBasicAnimalFace(ctx, r, { blush = false, eyesOnly = false, isBlinki
     ctx.arc(0, eyeY + eyeR * 1.8, r * 0.12, 0.15, Math.PI - 0.15);
     ctx.stroke();
   }
+
+  ctx.restore();
+}
+
+// ==========================================
+// THEME 3: HALLOWEEN KAWAII RENDERER 🎃
+// ==========================================
+function drawHalloweenCreature(ctx, tier, radius, options = {}) {
+  const r = radius;
+  ctx.save();
+  ctx.shadowColor = 'rgba(0, 0, 0, 0.2)';
+  ctx.shadowBlur = Math.max(4, r * 0.2);
+  ctx.shadowOffsetY = Math.max(2, r * 0.1);
+
+  if (tier === 0) {
+    // 0: Caramelito (Candy Corn)
+    ctx.beginPath();
+    ctx.arc(0, 0, r, 0, Math.PI * 2);
+    ctx.fillStyle = '#f97316';
+    ctx.fill();
+    ctx.shadowColor = 'transparent';
+
+    // Yellow bottom
+    ctx.fillStyle = '#fde047';
+    ctx.beginPath();
+    ctx.arc(0, 0, r, Math.PI * 0.2, Math.PI * 0.8);
+    ctx.fill();
+
+    // White top
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.arc(0, 0, r, Math.PI * 1.25, Math.PI * 1.75);
+    ctx.fill();
+
+    drawBasicAnimalFace(ctx, r, { blush: true, isBlinking: options.blink });
+  } else if (tier === 1) {
+    // 1: Ojito Saltón (Eyeball)
+    ctx.beginPath();
+    ctx.arc(0, 0, r, 0, Math.PI * 2);
+    ctx.fillStyle = '#f8fafc';
+    ctx.fill();
+    ctx.shadowColor = 'transparent';
+
+    // Violet Iris
+    ctx.fillStyle = '#9333ea';
+    ctx.beginPath();
+    ctx.arc(0, 0, r * 0.48, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Black pupil
+    ctx.fillStyle = '#0f172a';
+    ctx.beginPath();
+    ctx.arc(0, 0, r * 0.26, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Catchlight (cute heart/sparkle)
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.arc(-r * 0.12, -r * 0.12, r * 0.12, 0, Math.PI * 2);
+    ctx.fill();
+  } else if (tier === 2) {
+    // 2: Arañita (Spider)
+    // 8 cute spider legs
+    ctx.strokeStyle = '#581c87';
+    ctx.lineWidth = Math.max(2, r * 0.08);
+    ctx.lineCap = 'round';
+    [-1, 1].forEach(dir => {
+      [-0.4, -0.1, 0.2, 0.5].forEach(ang => {
+        ctx.beginPath();
+        ctx.moveTo(dir * r * 0.8, r * ang);
+        ctx.lineTo(dir * (r * 1.3), r * ang - r * 0.2);
+        ctx.lineTo(dir * (r * 1.45), r * ang + r * 0.2);
+        ctx.stroke();
+      });
+    });
+
+    ctx.beginPath();
+    ctx.arc(0, 0, r, 0, Math.PI * 2);
+    const grad = ctx.createRadialGradient(-r * 0.3, -r * 0.3, r * 0.1, 0, 0, r);
+    grad.addColorStop(0, '#a855f7');
+    grad.addColorStop(0.7, '#6b21a8');
+    grad.addColorStop(1, '#3b0764');
+    ctx.fillStyle = grad;
+    ctx.fill();
+    ctx.shadowColor = 'transparent';
+
+    drawBasicAnimalFace(ctx, r, { blush: true, isBlinking: options.blink });
+  } else if (tier === 3) {
+    // 3: Murcielaguito (Bat)
+    // Bat wings
+    ctx.fillStyle = '#4c1d95';
+    [-1, 1].forEach(dir => {
+      ctx.beginPath();
+      ctx.moveTo(dir * r * 0.6, 0);
+      ctx.quadraticCurveTo(dir * (r * 1.6), -r * 0.6, dir * (r * 1.5), r * 0.2);
+      ctx.quadraticCurveTo(dir * (r * 1.1), r * 0.4, dir * (r * 0.8), r * 0.2);
+      ctx.closePath();
+      ctx.fill();
+    });
+
+    // Body
+    ctx.beginPath();
+    ctx.arc(0, 0, r, 0, Math.PI * 2);
+    const grad = ctx.createRadialGradient(-r * 0.3, -r * 0.3, r * 0.1, 0, 0, r);
+    grad.addColorStop(0, '#a78bfa');
+    grad.addColorStop(0.7, '#7c3aed');
+    grad.addColorStop(1, '#4c1d95');
+    ctx.fillStyle = grad;
+    ctx.fill();
+    ctx.shadowColor = 'transparent';
+
+    // Pointy ears
+    [-r * 0.5, r * 0.5].forEach(ex => {
+      ctx.fillStyle = '#6d28d9';
+      ctx.beginPath();
+      ctx.moveTo(ex - r * 0.15, -r * 0.7);
+      ctx.lineTo(ex, -r * 1.15);
+      ctx.lineTo(ex + r * 0.15, -r * 0.7);
+      ctx.fill();
+    });
+
+    // Fangs
+    ctx.fillStyle = '#ffffff';
+    [-r * 0.08, r * 0.08].forEach(fx => {
+      ctx.beginPath();
+      ctx.moveTo(fx - r * 0.04, r * 0.18);
+      ctx.lineTo(fx + r * 0.04, r * 0.18);
+      ctx.lineTo(fx, r * 0.28);
+      ctx.fill();
+    });
+
+    drawBasicAnimalFace(ctx, r, { blush: true, isBlinking: options.blink });
+  } else if (tier === 5) {
+    // 5: Fantasmita (Ghost)
+    ctx.beginPath();
+    ctx.arc(0, 0, r, 0, Math.PI * 2);
+    const grad = ctx.createRadialGradient(-r * 0.3, -r * 0.3, r * 0.1, 0, 0, r);
+    grad.addColorStop(0, '#ffffff');
+    grad.addColorStop(0.75, '#f1f5f9');
+    grad.addColorStop(1, '#cbd5e1');
+    ctx.fillStyle = grad;
+    ctx.fill();
+    ctx.shadowColor = 'transparent';
+
+    // Big happy "O" mouth for "BOO!"
+    ctx.fillStyle = '#1e1b4b';
+    ctx.beginPath();
+    ctx.ellipse(0, r * 0.22, r * 0.14, r * 0.2, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    drawBasicAnimalFace(ctx, r, { blush: true, eyesOnly: true, isBlinking: options.blink });
+  } else if (tier === 6) {
+    // 6: Frankie (Frankenstein)
+    ctx.beginPath();
+    ctx.arc(0, 0, r, 0, Math.PI * 2);
+    const grad = ctx.createRadialGradient(-r * 0.3, -r * 0.3, r * 0.1, 0, 0, r);
+    grad.addColorStop(0, '#bbf7d0');
+    grad.addColorStop(0.7, '#86efac');
+    grad.addColorStop(1, '#22c55e');
+    ctx.fillStyle = grad;
+    ctx.fill();
+    ctx.shadowColor = 'transparent';
+
+    // Black spiky hair on top
+    ctx.fillStyle = '#1e293b';
+    ctx.beginPath();
+    ctx.moveTo(-r * 0.85, -r * 0.4);
+    for (let x = -r * 0.85; x <= r * 0.85; x += r * 0.25) {
+      ctx.lineTo(x + r * 0.12, -r * 0.95);
+      ctx.lineTo(x + r * 0.25, -r * 0.7);
+    }
+    ctx.closePath();
+    ctx.fill();
+
+    // Forehead stitch
+    ctx.strokeStyle = '#1e293b';
+    ctx.lineWidth = Math.max(1.8, r * 0.06);
+    ctx.beginPath();
+    ctx.moveTo(-r * 0.3, -r * 0.35);
+    ctx.lineTo(r * 0.2, -r * 0.35);
+    [-0.2, -0.05, 0.1].forEach(sx => {
+      ctx.moveTo(r * sx, -r * 0.45);
+      ctx.lineTo(r * sx, -r * 0.25);
+    });
+    ctx.stroke();
+
+    drawBasicAnimalFace(ctx, r, { blush: true, isBlinking: options.blink });
+  } else if (tier === 7) {
+    // 7: Brujita (Witch Hat)
+    ctx.beginPath();
+    ctx.arc(0, 0, r, 0, Math.PI * 2);
+    const grad = ctx.createRadialGradient(-r * 0.3, -r * 0.3, r * 0.1, 0, 0, r);
+    grad.addColorStop(0, '#f3e8ff');
+    grad.addColorStop(0.7, '#d8b4fe');
+    grad.addColorStop(1, '#9333ea');
+    ctx.fillStyle = grad;
+    ctx.fill();
+    ctx.shadowColor = 'transparent';
+
+    // Witch hat cone
+    ctx.fillStyle = '#581c87';
+    ctx.beginPath();
+    ctx.moveTo(-r * 0.8, -r * 0.35);
+    ctx.lineTo(r * 0.8, -r * 0.35);
+    ctx.lineTo(r * 0.2, -r * 1.3);
+    ctx.closePath();
+    ctx.fill();
+
+    // Gold buckle
+    ctx.fillStyle = '#facc15';
+    ctx.fillRect(-r * 0.15, -r * 0.52, r * 0.3, r * 0.14);
+
+    drawBasicAnimalFace(ctx, r, { blush: true, isBlinking: options.blink });
+  } else if (tier === 13) {
+    // 13: Gran Calabaza Jack-o'-Lantern 🎃
+    ctx.beginPath();
+    ctx.arc(0, 0, r, 0, Math.PI * 2);
+    const grad = ctx.createRadialGradient(-r * 0.3, -r * 0.3, r * 0.1, 0, 0, r);
+    grad.addColorStop(0, '#fed7aa');
+    grad.addColorStop(0.65, '#f97316');
+    grad.addColorStop(1, '#c2410c');
+    ctx.fillStyle = grad;
+    ctx.fill();
+    ctx.shadowColor = 'transparent';
+
+    // Green pumpkin stem
+    ctx.fillStyle = '#15803d';
+    ctx.beginPath();
+    ctx.roundRect(-r * 0.1, -r * 1.15, r * 0.2, r * 0.3, 4);
+    ctx.fill();
+
+    // Glowing carved eyes
+    ctx.fillStyle = '#fef08a';
+    ctx.shadowColor = '#facc15';
+    ctx.shadowBlur = 10;
+    [-r * 0.35, r * 0.35].forEach(ex => {
+      ctx.beginPath();
+      ctx.moveTo(ex, -r * 0.22);
+      ctx.lineTo(ex - r * 0.16, r * 0.05);
+      ctx.lineTo(ex + r * 0.16, r * 0.05);
+      ctx.closePath();
+      ctx.fill();
+    });
+
+    // Triangle nose
+    ctx.beginPath();
+    ctx.moveTo(0, r * 0.05);
+    ctx.lineTo(-r * 0.08, r * 0.18);
+    ctx.lineTo(r * 0.08, r * 0.18);
+    ctx.closePath();
+    ctx.fill();
+
+    // Carved jagged toothy smile
+    ctx.beginPath();
+    ctx.moveTo(-r * 0.55, r * 0.28);
+    ctx.lineTo(-r * 0.35, r * 0.42);
+    ctx.lineTo(-r * 0.2, r * 0.32);
+    ctx.lineTo(0, r * 0.45);
+    ctx.lineTo(r * 0.2, r * 0.32);
+    ctx.lineTo(r * 0.35, r * 0.42);
+    ctx.lineTo(r * 0.55, r * 0.28);
+    ctx.lineTo(0, r * 0.6);
+    ctx.closePath();
+    ctx.fill();
+    ctx.shadowColor = 'transparent';
+
+  } else {
+    // Generic Halloween monsters
+    ctx.beginPath();
+    ctx.arc(0, 0, r, 0, Math.PI * 2);
+    const config = THEME_HALLOWEEN[tier] || THEME_HALLOWEEN[0];
+    const grad = ctx.createRadialGradient(-r * 0.3, -r * 0.3, r * 0.1, 0, 0, r);
+    grad.addColorStop(0, '#ffffff');
+    grad.addColorStop(0.7, config.color);
+    grad.addColorStop(1, '#0f172a');
+    ctx.fillStyle = grad;
+    ctx.fill();
+    ctx.shadowColor = 'transparent';
+
+    drawBasicAnimalFace(ctx, r, { blush: true, isBlinking: options.blink });
+  }
+
+  // Specular sheen
+  ctx.save();
+  ctx.beginPath();
+  ctx.rotate(-Math.PI / 4.2);
+  ctx.ellipse(-r * 0.32, -r * 0.45, r * 0.4, r * 0.18, 0, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
+  ctx.fill();
+  ctx.restore();
 
   ctx.restore();
 }
@@ -1657,13 +2001,9 @@ function gameLoop() {
 
   aimX += (targetAimX - aimX) * 0.35;
 
-  // 1. Draw Container (Glass Box or Rustic Wooden Pen)
   drawContainer(context);
-
-  // 2. Draw Aiming Guide & Hovering Item
   drawAimingGuide(context);
 
-  // 3. Draw All Dynamic Bodies
   for (let i = 0; i < bodies.length; i++) {
     const body = bodies[i];
     
@@ -1673,7 +2013,6 @@ function gameLoop() {
       context.translate(body.position.x, body.position.y);
       context.rotate(body.angle);
       
-      // Elastic squash & stretch
       if (body.squashFactor && body.squashFactor > 0.005) {
         body.squashPhase = (body.squashPhase || 0) + 0.35;
         const decay = Math.exp(-body.squashPhase * 0.45);
@@ -1684,7 +2023,6 @@ function gameLoop() {
         if (decay < 0.03) body.squashFactor = 0;
       }
 
-      // Elastic spawn bounce on merge
       if (body.spawnTime) {
         const elapsed = performance.now() - body.spawnTime;
         if (elapsed < 380) {
@@ -1694,7 +2032,6 @@ function gameLoop() {
         }
       }
 
-      // Blinking
       body.blinkTimer = (body.blinkTimer || 100) - 1;
       let isBlinking = false;
       if (body.blinkTimer <= 0) {
@@ -1704,8 +2041,9 @@ function gameLoop() {
         }
       }
 
-      // Render according to active theme
-      if (currentTheme === 'animals') {
+      if (currentTheme === 'halloween') {
+        drawHalloweenCreature(context, body.fruitTier, config.radius, { blink: isBlinking });
+      } else if (currentTheme === 'animals') {
         drawChubbyAnimal(context, body.fruitTier, config.radius, { blink: isBlinking });
       } else {
         drawJuicyFruit(context, body.fruitTier, config.radius, { blink: isBlinking });
@@ -1714,7 +2052,6 @@ function gameLoop() {
       context.restore();
 
     } else if (body.isRock) {
-      // 3D Polished Granite Rock
       context.save();
       context.translate(body.position.x, body.position.y);
       context.rotate(body.angle);
@@ -1749,7 +2086,6 @@ function gameLoop() {
       context.restore();
     }
     
-    // Check Game Over
     if (!isGameOver && (body.fruitTier !== undefined || body.isRock) && body.position.y < TOP_LIMIT + 10 && body.velocity.y > -0.5 && body.velocity.y < 0.5) {
       if (body.speed < 0.8 && performance.now() - (body.spawnTime || 0) > 1200) {
         triggerGameOver();
@@ -1757,7 +2093,6 @@ function gameLoop() {
     }
   }
 
-  // 4. Draw VFX
   updateAndDrawVFX(context);
 }
 
