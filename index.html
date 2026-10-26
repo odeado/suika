@@ -11,7 +11,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Suika Kawaii" />
-    <title>Suika Kawaii - Frutas, Granja & Halloween</title>
+    <title>Suika Kawaii - Frutas, Granja, Halloween & Océano</title>
     <link rel="stylesheet" href="/src/style.css" />
   </head>
   <body class="theme-fruits">
@@ -29,7 +29,7 @@
 
         <!-- Theme Toggle Button at top center -->
         <div class="theme-switch-container">
-          <button id="theme-toggle-btn" class="theme-switch-btn" title="Cambiar Tema">
+          <button id="theme-toggle-btn" class="theme-switch-btn" title="Cambiar Tema" type="button">
             <span id="theme-toggle-icon">🐮</span>
             <span id="theme-toggle-label">Granja</span>
           </button>
@@ -39,8 +39,8 @@
           <div id="next-fruit-preview"></div>
         </div>
 
-        <!-- Floating PWA Install button for quick 1-tap install on phone -->
-        <button id="pwa-install-top-btn" class="pwa-install-btn hidden" title="Instalar en el celular">
+        <!-- Floating PWA Install button -->
+        <button id="pwa-install-top-btn" class="pwa-install-btn hidden" title="Instalar en el celular" type="button">
           📲 Instalar
         </button>
       </div>
@@ -53,7 +53,7 @@
         
         <div id="submit-score-section">
           <input type="text" id="player-name" placeholder="Tu Nombre" maxlength="15" />
-          <button id="submit-score-btn">Guardar Puntaje</button>
+          <button id="submit-score-btn" type="button">Guardar Puntaje</button>
         </div>
 
         <div id="leaderboard-section">
@@ -63,7 +63,7 @@
           </ul>
         </div>
 
-        <button id="restart-button">Volver al Menú</button>
+        <button id="restart-button" type="button">Volver al Menú</button>
       </div>
     </div>
 
@@ -71,49 +71,55 @@
     <div id="start-screen">
       <div class="start-modal">
         <h1 id="start-modal-title">🍉 Suika Kawaii</h1>
-        <p id="start-modal-subtitle" style="font-size: 14px; margin-bottom: 12px;">¡Elige tu tema y fusiona!</p>
+        <p id="start-modal-subtitle" style="font-size: 14px; margin-bottom: 12px;">¡Elige tu tema favorito!</p>
         
-        <!-- 3 Theme Selector Cards -->
+        <!-- 4 Theme Selector Cards -->
         <div class="theme-cards-container">
-          <button class="theme-card active" data-theme="fruits" id="select-theme-fruits">
+          <button class="theme-card active" data-theme="fruits" id="select-theme-fruits" type="button">
             <div class="theme-card-icon">🍉</div>
             <div class="theme-card-title">Frutas</div>
             <div class="theme-card-desc">Playa & Cristal</div>
           </button>
           
-          <button class="theme-card" data-theme="animals" id="select-theme-animals">
+          <button class="theme-card" data-theme="animals" id="select-theme-animals" type="button">
             <div class="theme-card-icon">🐮</div>
             <div class="theme-card-title">Granja</div>
             <div class="theme-card-desc">Animalitos</div>
           </button>
 
-          <button class="theme-card" data-theme="halloween" id="select-theme-halloween">
+          <button class="theme-card" data-theme="halloween" id="select-theme-halloween" type="button">
             <div class="theme-card-icon">🎃</div>
             <div class="theme-card-title">Halloween</div>
             <div class="theme-card-desc">Fantasmas</div>
           </button>
+
+          <button class="theme-card" data-theme="ocean" id="select-theme-ocean" type="button">
+            <div class="theme-card-icon">🌊</div>
+            <div class="theme-card-title">Océano</div>
+            <div class="theme-card-desc">Acuario 3D</div>
+          </button>
         </div>
 
         <!-- PWA Install button inside modal -->
-        <button id="pwa-install-modal-btn" class="pwa-install-banner-btn hidden">
+        <button id="pwa-install-modal-btn" class="pwa-install-banner-btn hidden" type="button">
           <span>📲 Instalar App en el Celular</span>
           <span style="font-size: 11px; opacity: 0.85;">Juega sin navegador y a pantalla completa</span>
         </button>
 
         <div id="mode-selection" style="width: 100%; margin-top: 6px;">
-          <button id="play-solo-btn" class="menu-btn">Jugar Ahora</button>
-          <button id="play-multi-btn" class="menu-btn secondary-btn">Modo Multijugador</button>
+          <button id="play-solo-btn" class="menu-btn" type="button">Jugar Ahora</button>
+          <button id="play-multi-btn" class="menu-btn secondary-btn" type="button">Modo Multijugador</button>
         </div>
 
         <div id="multiplayer-lobby" class="hidden" style="width: 100%;">
           <h3>Salas Multijugador</h3>
-          <button id="create-room-btn" class="menu-btn">Crear Sala</button>
+          <button id="create-room-btn" class="menu-btn" type="button">Crear Sala</button>
           
           <div style="margin: 10px 0; font-weight: bold; color: #64748b;">O</div>
           
           <input type="text" id="room-code-input" placeholder="Ej. A4X9" maxlength="4" style="text-transform: uppercase;"/>
-          <button id="join-room-btn" class="menu-btn secondary-btn">Unirse a Sala</button>
-          <button id="back-to-menu-btn" style="margin-top: 10px; font-size: 14px; padding: 5px 10px; background: none; border: none; text-decoration: underline; color: #64748b; cursor: pointer;">Volver</button>
+          <button id="join-room-btn" class="menu-btn secondary-btn" type="button">Unirse a Sala</button>
+          <button id="back-to-menu-btn" type="button" style="margin-top: 10px; font-size: 14px; padding: 5px 10px; background: none; border: none; text-decoration: underline; color: #64748b; cursor: pointer;">Volver</button>
         </div>
 
         <div id="waiting-room" class="hidden">
