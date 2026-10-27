@@ -113,6 +113,27 @@ function playDropSound(theme) {
   osc.stop(now + 0.14);
 }
 
+function playImpactSound(intensity = 1) {
+  if (audioCtx.state === 'suspended') return;
+  try {
+    const now = audioCtx.currentTime;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(160, now);
+    osc.frequency.exponentialRampToValueAtTime(70, now + 0.08);
+    const vol = Math.min(0.25, Math.max(0.04, (intensity || 1) * 0.08));
+    gain.gain.setValueAtTime(vol, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start(now);
+    osc.stop(now + 0.08);
+  } catch (e) {
+    // Audio context error ignore
+  }
+}
+
 function playMergeSound(tier, theme) {
   if (audioCtx.state === 'suspended') return;
   const now = audioCtx.currentTime;
@@ -969,26 +990,32 @@ function handleCollisions(event) {
   const activeItems = getActiveItems();
 
   for (let i = 0; i < pairs.length; i++) {
-    const bodyA = pairs[i].bodyA;
-    const bodyB = pairs[i].bodyB;
+    const rawA = pairs[i].bodyA;
+    const rawB = pairs[i].bodyB;
+    const bodyA = rawA.parent || rawA;
+    const bodyB = rawB.parent || rawB;
 
-    const relSpeed = Matter.Vector.magnitude(Matter.Vector.sub(bodyA.velocity, bodyB.velocity));
-    if (relSpeed > 1.8) {
-      const impactAngle = Math.atan2(bodyB.position.y - bodyA.position.y, bodyB.position.x - bodyA.position.x);
-      if (bodyA.fruitTier !== undefined) {
-        bodyA.squashFactor = Math.min(0.35, relSpeed * 0.035);
-        bodyA.squashAngle = impactAngle;
-        bodyA.squashPhase = 0;
+    try {
+      const relSpeed = Matter.Vector.magnitude(Matter.Vector.sub(bodyA.velocity, bodyB.velocity));
+      if (relSpeed > 1.8) {
+        const impactAngle = Math.atan2(bodyB.position.y - bodyA.position.y, bodyB.position.x - bodyA.position.x);
+        if (bodyA.fruitTier !== undefined) {
+          bodyA.squashFactor = Math.min(0.35, relSpeed * 0.035);
+          bodyA.squashAngle = impactAngle;
+          bodyA.squashPhase = 0;
+        }
+        if (bodyB.fruitTier !== undefined) {
+          bodyB.squashFactor = Math.min(0.35, relSpeed * 0.035);
+          bodyB.squashAngle = impactAngle + Math.PI / 2;
+          bodyB.squashPhase = 0;
+        }
+        if (relSpeed > 3.5) {
+          playImpactSound(relSpeed * 0.2);
+          screenShake = Math.max(screenShake, relSpeed * 1.2);
+        }
       }
-      if (bodyB.fruitTier !== undefined) {
-        bodyB.squashFactor = Math.min(0.35, relSpeed * 0.035);
-        bodyB.squashAngle = impactAngle + Math.PI / 2;
-        bodyB.squashPhase = 0;
-      }
-      if (relSpeed > 3.5) {
-        playImpactSound(relSpeed * 0.2);
-        screenShake = Math.max(screenShake, relSpeed * 1.2);
-      }
+    } catch (e) {
+      // Ignore visual bounce/audio errors so merge ALWAYS proceeds
     }
 
     if (bodyA.fruitTier !== undefined && bodyB.fruitTier !== undefined) {
@@ -1001,6 +1028,7 @@ function handleCollisions(event) {
         if (isAInWorld && isBInWorld) {
           const nextTier = bodyA.fruitTier + 1;
           const newConfig = activeItems[nextTier];
+          if (!newConfig) continue;
           
           const newX = (bodyA.position.x + bodyB.position.x) / 2;
           const newY = (bodyA.position.y + bodyB.position.y) / 2;
@@ -1018,8 +1046,12 @@ function handleCollisions(event) {
           newBody.blinkTimer = Math.random() * 200 + 100;
 
           Matter.World.add(engine.world, newBody);
-          playMergeSound(nextTier, currentTheme);
-          spawnMergeVFX(newX, newY, newConfig);
+          try {
+            playMergeSound(nextTier, currentTheme);
+            spawnMergeVFX(newX, newY, newConfig);
+          } catch (e) {
+            // Visual/audio error shouldn't stop score
+          }
           
           currentScore += newConfig.points;
           updateScore();
