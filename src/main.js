@@ -4,10 +4,42 @@ import { saveScore, getTopScores, createRoom, joinRoom, listenToRoom, updateRoom
 
 // --- Register Service Worker for PWA (Offline & Installable) ---
 if ('serviceWorker' in navigator) {
+  // Purge any legacy caches immediately
+  if ('caches' in window) {
+    caches.keys().then((keys) => {
+      keys.forEach((key) => {
+        if (key === 'suika-kawaii-v1') {
+          caches.delete(key);
+        }
+      });
+    });
+  }
+
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').catch((err) => {
+    navigator.serviceWorker.register('/sw.js').then((registration) => {
+      // Force check for updates on each visit
+      registration.update();
+      registration.onupdatefound = () => {
+        const installingWorker = registration.installing;
+        if (installingWorker) {
+          installingWorker.onstatechange = () => {
+            if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
+              window.location.reload();
+            }
+          };
+        }
+      };
+    }).catch((err) => {
       console.log('Service Worker registration failed:', err);
     });
+  });
+
+  let refreshing = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!refreshing) {
+      refreshing = true;
+      window.location.reload();
+    }
   });
 }
 
