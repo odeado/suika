@@ -43,6 +43,32 @@
         <button id="pwa-install-top-btn" class="pwa-install-btn hidden" title="Instalar en el celular" type="button">
           📲 Instalar
         </button>
+
+        <!-- Power-Ups Floating Toolbar at bottom -->
+        <div class="powerups-container">
+          <button id="powerup-shake-btn" class="powerup-btn" title="Sacudir Caja" type="button">
+            <span class="powerup-icon">🌪️</span>
+            <span class="powerup-label">Sacudir</span>
+            <span id="powerup-shake-badge" class="powerup-badge">Listo</span>
+          </button>
+          
+          <button id="powerup-zap-btn" class="powerup-btn" title="Lanzar Rayo Destructor" type="button">
+            <span class="powerup-icon">⚡</span>
+            <span class="powerup-label">Rayo</span>
+            <span id="powerup-zap-badge" class="powerup-badge">3</span>
+          </button>
+          
+          <button id="powerup-magic-btn" class="powerup-btn" title="Evolución Mágica" type="button">
+            <span class="powerup-icon">🪄</span>
+            <span class="powerup-label">Evolucionar</span>
+            <span id="powerup-magic-badge" class="powerup-badge">1</span>
+          </button>
+        </div>
+
+        <!-- Action helper toast banner -->
+        <div id="action-toast" class="action-toast hidden">
+          <span id="action-toast-text">¡Toca un objeto para destruirlo con el rayo!</span>
+        </div>
       </div>
     </div>
     

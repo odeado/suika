@@ -5,9 +5,7 @@ import { saveScore, getTopScores, createRoom, joinRoom, listenToRoom, updateRoom
 // --- Register Service Worker for PWA (Offline & Installable) ---
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').then((reg) => {
-      console.log('Service Worker registered successfully:', reg.scope);
-    }).catch((err) => {
+    navigator.serviceWorker.register('/sw.js').catch((err) => {
       console.log('Service Worker registration failed:', err);
     });
   });
@@ -27,10 +25,7 @@ window.addEventListener('beforeinstallprompt', (e) => {
 function triggerPWAInstall() {
   if (deferredPrompt) {
     deferredPrompt.prompt();
-    deferredPrompt.userChoice.then((choiceResult) => {
-      if (choiceResult.outcome === 'accepted') {
-        console.log('User accepted the PWA install prompt');
-      }
+    deferredPrompt.userChoice.then(() => {
       deferredPrompt = null;
       const topInstallBtn = document.getElementById('pwa-install-top-btn');
       const modalInstallBtn = document.getElementById('pwa-install-modal-btn');
@@ -38,11 +33,11 @@ function triggerPWAInstall() {
       if (modalInstallBtn) modalInstallBtn.classList.add('hidden');
     });
   } else {
-    alert("Para instalar en iPhone/iPad: presiona 'Compartir' en Safari y luego 'Agregar a la pantalla principal'. En Android: presiona los 3 puntitos del navegador y 'Instalar App'.");
+    alert("Para instalar en iPhone: en Safari pulsa 'Compartir' y luego 'Agregar al inicio'. En Android: pulsa los 3 puntos del navegador y 'Instalar App'.");
   }
 }
 
-// --- Enhanced Audio System with Theme-Specific Ambient BGM ---
+// --- Enhanced Audio System ---
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
 function playDropSound(theme) {
@@ -58,7 +53,6 @@ function playDropSound(theme) {
     gain.gain.setValueAtTime(0.12, now);
     gain.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
   } else if (theme === 'ocean') {
-    // Water droplet bubble pop
     osc.type = 'sine';
     osc.frequency.setValueAtTime(600, now);
     osc.frequency.exponentialRampToValueAtTime(1200, now + 0.05);
@@ -90,7 +84,6 @@ function playDropSound(theme) {
 function playMergeSound(tier, theme) {
   if (audioCtx.state === 'suspended') return;
   const now = audioCtx.currentTime;
-  
   const baseFreq = 340 + Math.min(tier, 15) * 45;
   const osc1 = audioCtx.createOscillator();
   const osc2 = audioCtx.createOscillator();
@@ -132,24 +125,85 @@ function playMergeSound(tier, theme) {
   osc2.stop(now + 0.32);
 }
 
-function playImpactSound(intensity = 1) {
+// Special Ability SFX
+function playThunderSound() {
+  if (audioCtx.state === 'suspended') return;
+  const now = audioCtx.currentTime;
+  
+  // Electric snap
+  const snap = audioCtx.createOscillator();
+  const snapGain = audioCtx.createGain();
+  snap.type = 'sawtooth';
+  snap.frequency.setValueAtTime(800, now);
+  snap.frequency.exponentialRampToValueAtTime(100, now + 0.15);
+  snapGain.gain.setValueAtTime(0.25, now);
+  snapGain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+  snap.connect(snapGain);
+  snapGain.connect(audioCtx.destination);
+  snap.start(now);
+  snap.stop(now + 0.15);
+
+  // Deep thunder rumble
+  const rumble = audioCtx.createOscillator();
+  const rumbleGain = audioCtx.createGain();
+  rumble.type = 'triangle';
+  rumble.frequency.setValueAtTime(95, now);
+  rumble.frequency.linearRampToValueAtTime(35, now + 0.6);
+  rumbleGain.gain.setValueAtTime(0.3, now);
+  rumbleGain.gain.exponentialRampToValueAtTime(0.001, now + 0.7);
+  rumble.connect(rumbleGain);
+  rumbleGain.connect(audioCtx.destination);
+  rumble.start(now);
+  rumble.stop(now + 0.7);
+}
+
+function playCowbellSound() {
   if (audioCtx.state === 'suspended') return;
   const now = audioCtx.currentTime;
   const osc = audioCtx.createOscillator();
   const gain = audioCtx.createGain();
-  
-  osc.type = 'sine';
-  osc.frequency.setValueAtTime(140, now);
-  osc.frequency.exponentialRampToValueAtTime(60, now + 0.08);
-  
-  const vol = Math.min(0.12, 0.03 * intensity);
-  gain.gain.setValueAtTime(vol, now);
-  gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
-  
+  osc.type = 'triangle';
+  osc.frequency.setValueAtTime(587.33, now);
+  osc.frequency.exponentialRampToValueAtTime(540, now + 0.35);
+  gain.gain.setValueAtTime(0.22, now);
+  gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
   osc.connect(gain);
   gain.connect(audioCtx.destination);
   osc.start(now);
-  osc.stop(now + 0.08);
+  osc.stop(now + 0.35);
+}
+
+function playSplashSound() {
+  if (audioCtx.state === 'suspended') return;
+  const now = audioCtx.currentTime;
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(350, now);
+  osc.frequency.exponentialRampToValueAtTime(850, now + 0.1);
+  osc.frequency.exponentialRampToValueAtTime(150, now + 0.35);
+  gain.gain.setValueAtTime(0.2, now);
+  gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  osc.start(now);
+  osc.stop(now + 0.35);
+}
+
+function playShakeSound() {
+  if (audioCtx.state === 'suspended') return;
+  const now = audioCtx.currentTime;
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.type = 'triangle';
+  osc.frequency.setValueAtTime(120, now);
+  osc.frequency.linearRampToValueAtTime(70, now + 0.25);
+  gain.gain.setValueAtTime(0.2, now);
+  gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  osc.start(now);
+  osc.stop(now + 0.25);
 }
 
 // --- Theme-Specific Ambient BGM Synthesizer ---
@@ -168,13 +222,10 @@ function restartThemeBGM() {
     bgmGain.connect(audioCtx.destination);
   }
   
-  // Soft, relaxing volume
   bgmGain.gain.value = 0.035;
-
   let chords, waveType, chordIntervalMs;
 
   if (currentTheme === 'halloween') {
-    // Mysterious, eerie celesta in D minor
     chords = [
       [293.66, 349.23, 440.00, 587.33], // Dm
       [233.08, 293.66, 349.23, 466.16], // Bb
@@ -184,7 +235,6 @@ function restartThemeBGM() {
     waveType = 'sawtooth';
     chordIntervalMs = 2400;
   } else if (currentTheme === 'animals') {
-    // Cheerful, sweet country folk in G major
     chords = [
       [196.00, 246.94, 293.66, 392.00], // G
       [146.83, 220.00, 293.66, 369.99], // D
@@ -194,7 +244,6 @@ function restartThemeBGM() {
     waveType = 'triangle';
     chordIntervalMs = 2100;
   } else if (currentTheme === 'ocean') {
-    // Deep, relaxing underwater ambient swells in Eb
     chords = [
       [155.56, 233.08, 311.13, 466.16], // Ebmaj7
       [207.65, 261.63, 311.13, 415.30], // Ab
@@ -204,7 +253,6 @@ function restartThemeBGM() {
     waveType = 'sine';
     chordIntervalMs = 2600;
   } else {
-    // Fruits: Island Bossa Nova in C
     chords = [
       [261.63, 329.63, 392.00, 493.88], // Cmaj7
       [220.00, 261.63, 329.63, 440.00], // Am7
@@ -246,14 +294,14 @@ const BOX_PADDING_X = Math.max(16, GAME_WIDTH * 0.05);
 const BOX_LEFT = BOX_PADDING_X;
 const BOX_RIGHT = GAME_WIDTH - BOX_PADDING_X;
 const BOX_WIDTH = BOX_RIGHT - BOX_LEFT;
-const BOX_BOTTOM = GAME_HEIGHT - Math.max(22, GAME_HEIGHT * 0.04);
+const BOX_BOTTOM = GAME_HEIGHT - Math.max(50, GAME_HEIGHT * 0.08); // Extra bottom clearance for powerups
 const TOP_LIMIT = GAME_HEIGHT * 0.22;
 const AIM_Y = TOP_LIMIT - 36;
 const WALL_THICKNESS = 60;
 
 const scaleFactor = Math.min(1.15, Math.max(0.75, BOX_WIDTH / 360));
 
-// --- THEME 1: FRUTAS ---
+// --- THEMES ---
 const THEME_FRUITS = [
   { name: "Arándano", radius: 13 * scaleFactor, color: '#3b82f6', points: 1 },
   { name: "Cereza", radius: 17 * scaleFactor, color: '#f43f5e', points: 3 },
@@ -277,7 +325,6 @@ const THEME_FRUITS = [
   { name: "Estrella", radius: 173 * scaleFactor, color: '#eab308', points: 370 },
 ];
 
-// --- THEME 2: GRANJA ---
 const THEME_ANIMALS = [
   { name: "Huevo", radius: 12 * scaleFactor, color: '#fef3c7', points: 1 },
   { name: "Pollito", radius: 16 * scaleFactor, color: '#fde047', points: 3 },
@@ -295,7 +342,6 @@ const THEME_ANIMALS = [
   { name: "Ballenita", radius: 148 * scaleFactor, color: '#3b82f6', points: 120 },
 ];
 
-// --- THEME 3: HALLOWEEN ---
 const THEME_HALLOWEEN = [
   { name: "Caramelo", radius: 12 * scaleFactor, color: '#f97316', points: 1 },
   { name: "Ojito", radius: 16 * scaleFactor, color: '#e2e8f0', points: 3 },
@@ -313,7 +359,6 @@ const THEME_HALLOWEEN = [
   { name: "Gran Calabaza", radius: 148 * scaleFactor, color: '#ea580c', points: 120 },
 ];
 
-// --- THEME 4: OCÉANO (ACUARIO MARINO) ---
 const THEME_OCEAN = [
   { name: "Camaroncito", radius: 12 * scaleFactor, color: '#f472b6', points: 1 },
   { name: "Pececito", radius: 16 * scaleFactor, color: '#f97316', points: 3 },
@@ -331,7 +376,6 @@ const THEME_OCEAN = [
   { name: "Gran Ballena Azul", radius: 148 * scaleFactor, color: '#2563eb', points: 120 },
 ];
 
-// Theme state: 'fruits' | 'animals' | 'halloween' | 'ocean'
 let currentTheme = localStorage.getItem('suika_theme') || 'fruits';
 
 function getActiveItems() {
@@ -352,10 +396,22 @@ let isPointerDown = false;
 let aimX = GAME_WIDTH / 2;
 let targetAimX = GAME_WIDTH / 2;
 
-// Particles & VFX System
+// Screen Shake, Flash & Atmospheric Darkness
+let screenShake = 0;
+let screenFlash = 0;
+let fogOffset = 0;
+
+// Particles, Lightning & VFX
 const particles = [];
 const shockwaves = [];
 const floatingTexts = [];
+const activeLightnings = [];
+
+// Interactive Power-Ups State
+let activePowerup = null; // null | 'zap' | 'magic'
+let powerupZapCount = 3;
+let powerupMagicCount = 1;
+let powerupShakeReady = true;
 
 // Multiplayer State
 let isMultiplayer = false;
@@ -376,6 +432,16 @@ const gameContainer = document.getElementById('game-container');
 const themeToggleBtn = document.getElementById('theme-toggle-btn');
 const themeToggleIcon = document.getElementById('theme-toggle-icon');
 const themeToggleLabel = document.getElementById('theme-toggle-label');
+
+// Power-up DOM
+const powerupShakeBtn = document.getElementById('powerup-shake-btn');
+const powerupZapBtn = document.getElementById('powerup-zap-btn');
+const powerupMagicBtn = document.getElementById('powerup-magic-btn');
+const powerupShakeBadge = document.getElementById('powerup-shake-badge');
+const powerupZapBadge = document.getElementById('powerup-zap-badge');
+const powerupMagicBadge = document.getElementById('powerup-magic-badge');
+const actionToast = document.getElementById('action-toast');
+const actionToastText = document.getElementById('action-toast-text');
 
 // Multiplayer DOM
 const playSoloBtn = document.getElementById('play-solo-btn');
@@ -449,6 +515,7 @@ function init() {
   setupMultiplayerUI();
   setupThemeControls();
   setupPWAButtons();
+  setupPowerups();
 
   Matter.Render.run(render);
   runner = Matter.Runner.create();
@@ -477,7 +544,6 @@ function applyThemeUI() {
     }
   }
 
-  // Update Start screen active cards
   const fruitCard = document.getElementById('select-theme-fruits');
   const animalCard = document.getElementById('select-theme-animals');
   const halloweenCard = document.getElementById('select-theme-halloween');
@@ -498,17 +564,13 @@ function switchTheme(newTheme) {
 
 function setupThemeControls() {
   if (themeToggleBtn) {
-    // Prevent event bubbling on themeToggleBtn
     ['mousedown', 'touchstart', 'pointerdown'].forEach(evt => {
-      themeToggleBtn.addEventListener(evt, (e) => {
-        e.stopPropagation();
-      }, { passive: false });
+      themeToggleBtn.addEventListener(evt, (e) => e.stopPropagation(), { passive: false });
     });
 
     themeToggleBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       e.preventDefault();
-      // Cycle: fruits -> animals -> halloween -> ocean -> fruits
       let next = 'fruits';
       if (currentTheme === 'fruits') next = 'animals';
       else if (currentTheme === 'animals') next = 'halloween';
@@ -545,6 +607,121 @@ function setupPWAButtons() {
   if (modalInstallBtn) {
     modalInstallBtn.addEventListener('click', triggerPWAInstall);
   }
+}
+
+// --- Interactive Power-Ups System ---
+function setupPowerups() {
+  ['mousedown', 'touchstart', 'pointerdown'].forEach(evt => {
+    powerupShakeBtn.addEventListener(evt, (e) => e.stopPropagation(), { passive: false });
+    powerupZapBtn.addEventListener(evt, (e) => e.stopPropagation(), { passive: false });
+    powerupMagicBtn.addEventListener(evt, (e) => e.stopPropagation(), { passive: false });
+  });
+
+  // 1. Shake Box
+  powerupShakeBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (!powerupShakeReady) return;
+    executeShake();
+  });
+
+  // 2. Zap Lightning
+  powerupZapBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (powerupZapCount <= 0) return;
+    if (activePowerup === 'zap') {
+      activePowerup = null;
+      powerupZapBtn.classList.remove('active-powerup');
+      actionToast.classList.add('hidden');
+    } else {
+      activePowerup = 'zap';
+      powerupZapBtn.classList.add('active-powerup');
+      powerupMagicBtn.classList.remove('active-powerup');
+      actionToastText.innerText = "⚡ ¡Toca un objeto para destruirlo con el rayo!";
+      actionToast.classList.remove('hidden');
+    }
+  });
+
+  // 3. Magic Level Up
+  powerupMagicBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (powerupMagicCount <= 0) return;
+    if (activePowerup === 'magic') {
+      activePowerup = null;
+      powerupMagicBtn.classList.remove('active-powerup');
+      actionToast.classList.add('hidden');
+    } else {
+      activePowerup = 'magic';
+      powerupMagicBtn.classList.add('active-powerup');
+      powerupZapBtn.classList.remove('active-powerup');
+      actionToastText.innerText = "🪄 ¡Toca un objeto para subirlo de nivel!";
+      actionToast.classList.remove('hidden');
+    }
+  });
+}
+
+function executeShake() {
+  powerupShakeReady = false;
+  powerupShakeBadge.innerText = '...';
+  powerupShakeBtn.classList.add('disabled');
+
+  playShakeSound();
+  screenShake = 14;
+
+  const bodies = Matter.Composite.allBodies(engine.world);
+  bodies.forEach(b => {
+    if (b.fruitTier !== undefined || b.isRock) {
+      Matter.Body.applyForce(b, b.position, {
+        x: (Math.random() - 0.5) * 0.05,
+        y: -0.05 - Math.random() * 0.03
+      });
+    }
+  });
+
+  setTimeout(() => {
+    powerupShakeReady = true;
+    powerupShakeBadge.innerText = 'Listo';
+    powerupShakeBtn.classList.remove('disabled');
+  }, 12000); // 12 second recharge
+}
+
+// Generate jagged lightning path
+function createLightningBranch(x1, y1, x2, y2) {
+  const points = [{ x: x1, y: y1 }];
+  const steps = 12;
+  const dx = (x2 - x1) / steps;
+  const dy = (y2 - y1) / steps;
+
+  for (let i = 1; i < steps; i++) {
+    const jitter = (Math.random() - 0.5) * 22;
+    points.push({
+      x: x1 + dx * i + jitter,
+      y: y1 + dy * i
+    });
+  }
+  points.push({ x: x2, y: y2 });
+  return points;
+}
+
+function triggerLightningStrike(targetX, targetY, targetBody = null) {
+  playThunderSound();
+  screenShake = 16;
+  screenFlash = 1.0;
+
+  // Add lightning visual
+  activeLightnings.push({
+    points: createLightningBranch(targetX + (Math.random() - 0.5) * 40, TOP_LIMIT - 30, targetX, targetY),
+    life: 14,
+    color: currentTheme === 'halloween' ? '#c084fc' : '#fef08a'
+  });
+
+  // Vaporize body if provided
+  if (targetBody && Matter.Composite.get(engine.world, targetBody.id, 'body')) {
+    Matter.World.remove(engine.world, targetBody);
+    spawnMergeVFX(targetX, targetY, { radius: 24, points: 50, color: '#facc15' });
+  }
+
+  currentScore += 50;
+  updateScore();
 }
 
 // --- Multiplayer Logic ---
@@ -641,6 +818,12 @@ function resetGame() {
   isGameOver = false;
   currentScore = 0;
   pendingPunishments = 0;
+  powerupZapCount = 3;
+  powerupMagicCount = 1;
+  powerupZapBadge.innerText = '3';
+  powerupMagicBadge.innerText = '1';
+  activePowerup = null;
+  actionToast.classList.add('hidden');
   updateScore();
   
   const bodies = Matter.Composite.allBodies(engine.world);
@@ -658,7 +841,7 @@ function rollNextFruit() {
   
   nextPreviewEl.innerHTML = '';
   const previewCanvas = document.createElement('canvas');
-  const boxSize = 60; 
+  const boxSize = 58; 
   previewCanvas.width = boxSize;
   previewCanvas.height = boxSize;
   const ctx = previewCanvas.getContext('2d');
@@ -770,7 +953,10 @@ function handleCollisions(event) {
         bodyB.squashAngle = impactAngle + Math.PI / 2;
         bodyB.squashPhase = 0;
       }
-      if (relSpeed > 3.5) playImpactSound(relSpeed * 0.2);
+      if (relSpeed > 3.5) {
+        playImpactSound(relSpeed * 0.2);
+        screenShake = Math.max(screenShake, relSpeed * 1.2);
+      }
     }
 
     if (bodyA.fruitTier !== undefined && bodyB.fruitTier !== undefined) {
@@ -801,11 +987,15 @@ function handleCollisions(event) {
 
           Matter.World.add(engine.world, newBody);
           playMergeSound(nextTier, currentTheme);
-          
           spawnMergeVFX(newX, newY, newConfig);
           
           currentScore += newConfig.points;
           updateScore();
+
+          // --- THEME ULTIMATE ABILITIES ON MEDIUM/HIGH MERGES (tier >= 5) ---
+          if (nextTier >= 5) {
+            triggerThemeUltimate(nextTier, newX, newY);
+          }
 
           if (isMultiplayer && nextTier >= 7) {
             sendPunishment(roomCode, isPlayer1);
@@ -813,6 +1003,107 @@ function handleCollisions(event) {
         }
       }
     }
+  }
+}
+
+// Special Ability triggered automatically on high merges
+function triggerThemeUltimate(tier, x, y) {
+  const bodies = Matter.Composite.allBodies(engine.world);
+
+  if (currentTheme === 'halloween') {
+    // 🎃 RAYO FANTASMAL: Lightning crashes down and destroys up to 2 lowest tier items!
+    triggerLightningStrike(x, y);
+    
+    // Find up to 2 items of tier <= 1
+    const smallMonsters = bodies.filter(b => b.fruitTier !== undefined && b.fruitTier <= 1);
+    const toZap = smallMonsters.slice(0, 2);
+    toZap.forEach((b, idx) => {
+      setTimeout(() => {
+        triggerLightningStrike(b.position.x, b.position.y, b);
+      }, (idx + 1) * 220);
+    });
+
+    floatingTexts.push({
+      x, y: y - 40,
+      text: "⚡ ¡RAYO FANTASMAL! ⚡",
+      color: '#c084fc',
+      alpha: 1,
+      scale: 0.7,
+      life: 0,
+      maxLife: 55
+    });
+
+  } else if (currentTheme === 'fruits') {
+    // 🍉 MEGA SPLASH: Splash ring and pops nearby blueberries/cherries!
+    playSplashSound();
+    screenShake = 12;
+    shockwaves.push({
+      x, y,
+      radius: 30,
+      maxRadius: 180,
+      alpha: 1,
+      color: '#38bdf8'
+    });
+
+    const smallFruits = bodies.filter(b => b.fruitTier !== undefined && b.fruitTier === 0);
+    if (smallFruits.length > 0) {
+      const b = smallFruits[0];
+      Matter.World.remove(engine.world, b);
+      spawnMergeVFX(b.position.x, b.position.y, { radius: 20, points: 30, color: '#f43f5e' });
+    }
+
+    floatingTexts.push({
+      x, y: y - 40,
+      text: "🍉 ¡MEGA SPLASH! 🍉",
+      color: '#f97316',
+      alpha: 1,
+      scale: 0.7,
+      life: 0,
+      maxLife: 55
+    });
+
+  } else if (currentTheme === 'animals') {
+    // 🐮 GRAN COSECHA: Cowbell rings and hatches eggs into chicks!
+    playCowbellSound();
+    screenShake = 10;
+    
+    const eggs = bodies.filter(b => b.fruitTier === 0);
+    eggs.slice(0, 2).forEach(egg => {
+      egg.fruitTier = 1; // Evolve egg into chick!
+      spawnMergeVFX(egg.position.x, egg.position.y, { radius: 20, points: 20, color: '#fde047' });
+    });
+
+    floatingTexts.push({
+      x, y: y - 40,
+      text: "🐮 ¡GRAN COSECHA! 🌟",
+      color: '#fbbf24',
+      alpha: 1,
+      scale: 0.7,
+      life: 0,
+      maxLife: 55
+    });
+
+  } else if (currentTheme === 'ocean') {
+    // 🌊 VÓRTICE MARINO: Bubble cyclone clears smallest shrimp!
+    playSplashSound();
+    screenShake = 12;
+
+    const shrimps = bodies.filter(b => b.fruitTier === 0);
+    if (shrimps.length > 0) {
+      const b = shrimps[0];
+      Matter.World.remove(engine.world, b);
+      spawnMergeVFX(b.position.x, b.position.y, { radius: 20, points: 30, color: '#06b6d4' });
+    }
+
+    floatingTexts.push({
+      x, y: y - 40,
+      text: "🌊 ¡VÓRTICE MARINO! 🫧",
+      color: '#38bdf8',
+      alpha: 1,
+      scale: 0.7,
+      life: 0,
+      maxLife: 55
+    });
   }
 }
 
@@ -889,6 +1180,7 @@ function spawnMergeVFX(x, y, config) {
 }
 
 function updateAndDrawVFX(ctx) {
+  // Shockwaves
   for (let i = shockwaves.length - 1; i >= 0; i--) {
     const s = shockwaves[i];
     s.radius += (s.maxRadius - s.radius) * 0.18;
@@ -907,6 +1199,37 @@ function updateAndDrawVFX(ctx) {
     if (s.alpha < 0.05) shockwaves.splice(i, 1);
   }
 
+  // Lightning Bolts
+  for (let i = activeLightnings.length - 1; i >= 0; i--) {
+    const l = activeLightnings[i];
+    l.life--;
+    const alpha = l.life / 14;
+
+    ctx.save();
+    ctx.strokeStyle = `rgba(255, 255, 255, ${alpha})`;
+    ctx.shadowColor = l.color;
+    ctx.shadowBlur = 15;
+    ctx.lineWidth = 4 * alpha;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    
+    ctx.beginPath();
+    ctx.moveTo(l.points[0].x, l.points[0].y);
+    for (let p of l.points) {
+      ctx.lineTo(p.x, p.y);
+    }
+    ctx.stroke();
+
+    // Outer glow
+    ctx.strokeStyle = l.color;
+    ctx.lineWidth = 8 * alpha;
+    ctx.stroke();
+    ctx.restore();
+
+    if (l.life <= 0) activeLightnings.splice(i, 1);
+  }
+
+  // Particles
   for (let i = particles.length - 1; i >= 0; i--) {
     const p = particles[i];
     p.life++;
@@ -943,6 +1266,7 @@ function updateAndDrawVFX(ctx) {
     if (p.life >= p.maxLife) particles.splice(i, 1);
   }
 
+  // Floating text
   for (let i = floatingTexts.length - 1; i >= 0; i--) {
     const ft = floatingTexts[i];
     ft.life++;
@@ -954,13 +1278,13 @@ function updateAndDrawVFX(ctx) {
     ctx.globalAlpha = ft.alpha;
     ctx.translate(ft.x, ft.y);
     ctx.scale(ft.scale, ft.scale);
-    ctx.font = 'bold 22px "Segoe UI", sans-serif';
+    ctx.font = 'bold 20px "Segoe UI", sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.strokeStyle = '#ffffff';
     ctx.lineWidth = 4;
     ctx.strokeText(ft.text, 0, 0);
-    ctx.fillStyle = currentTheme === 'ocean' ? '#0284c7' : (currentTheme === 'halloween' ? '#a855f7' : (currentTheme === 'animals' ? '#b45309' : '#ea580c'));
+    ctx.fillStyle = ft.color || '#ea580c';
     ctx.fillText(ft.text, 0, 0);
     ctx.restore();
 
@@ -968,12 +1292,11 @@ function updateAndDrawVFX(ctx) {
   }
 }
 
-// --- Container Rendering ---
+// --- Container & Dynamic Atmospheric Rendering ---
 function drawContainer(ctx) {
   ctx.save();
 
   if (currentTheme === 'ocean') {
-    // 3D Crystal Water Aquarium with Caustics & Bubbles
     const boxHeight = BOX_BOTTOM - TOP_LIMIT;
     const grad = ctx.createLinearGradient(0, TOP_LIMIT, 0, BOX_BOTTOM);
     grad.addColorStop(0, 'rgba(56, 189, 248, 0.22)');
@@ -982,7 +1305,6 @@ function drawContainer(ctx) {
     ctx.fillStyle = grad;
     ctx.fillRect(BOX_LEFT, TOP_LIMIT, BOX_WIDTH, boxHeight);
 
-    // Cyan Neon Bevels
     ctx.beginPath();
     ctx.moveTo(BOX_LEFT, TOP_LIMIT);
     ctx.lineTo(BOX_LEFT, BOX_BOTTOM);
@@ -1028,6 +1350,27 @@ function drawContainer(ctx) {
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
     ctx.lineWidth = 1;
     ctx.stroke();
+
+    // DYNAMIC NIGHT ATMOSPHERE: Darkness Vignette based on score
+    const nightDarkness = Math.min(0.68, currentScore / 1600);
+    const vignette = ctx.createRadialGradient(
+      GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH * 0.2,
+      GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH * 0.85
+    );
+    vignette.addColorStop(0, 'rgba(0, 0, 0, 0)');
+    vignette.addColorStop(1, `rgba(5, 2, 15, ${nightDarkness})`);
+    ctx.fillStyle = vignette;
+    ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+
+    // Eerie drifting floor mist/fog
+    fogOffset += 0.4;
+    ctx.fillStyle = 'rgba(168, 85, 247, 0.12)';
+    ctx.beginPath();
+    for (let x = BOX_LEFT; x <= BOX_RIGHT; x += 30) {
+      const fogY = BOX_BOTTOM - 18 + Math.sin((x + fogOffset) * 0.05) * 8;
+      ctx.arc(x, fogY, 22, 0, Math.PI * 2);
+    }
+    ctx.fill();
 
   } else if (currentTheme === 'animals') {
     // 3D Rustic Farm Wooden Pen
@@ -1154,7 +1497,7 @@ function drawWoodPost(ctx, x, y, w, h) {
 
 // --- Aiming Guide & Hovering Item ---
 function drawAimingGuide(ctx) {
-  if (isGameOver || isDropping) return;
+  if (isGameOver || isDropping || activePowerup) return;
 
   const activeItems = getActiveItems();
   const currentConfig = activeItems[nextFruitTier] || activeItems[0];
@@ -1206,7 +1549,7 @@ function drawAimingGuide(ctx) {
 }
 
 // ==========================================
-// THEME 1: FRUTAS 3D CRISTAL RENDERER
+// RENDERERS (FRUTAS, GRANJA, HALLOWEEN, OCÉANO)
 // ==========================================
 function drawJuicyFruit(ctx, tier, radius, options = {}) {
   const config = THEME_FRUITS[tier] || THEME_FRUITS[0];
@@ -1247,9 +1590,6 @@ function drawJuicyFruit(ctx, tier, radius, options = {}) {
   ctx.fill();
 
   ctx.shadowColor = 'transparent';
-  ctx.shadowBlur = 0;
-  ctx.shadowOffsetY = 0;
-
   drawFruitDetails(ctx, tier, r);
   drawAnimeFace(ctx, tier, r, options.blink);
 
@@ -1365,9 +1705,6 @@ function drawFruitDetails(ctx, tier, r) {
   }
 }
 
-// ==========================================
-// THEME 2: GRANJA KAWAII ANIMAL RENDERER
-// ==========================================
 function drawChubbyAnimal(ctx, tier, radius, options = {}) {
   const r = radius;
   ctx.save();
@@ -1702,7 +2039,6 @@ function drawBasicAnimalFace(ctx, r, { blush = false, eyesOnly = false, isBlinki
   const eyeR = Math.max(2.5, r * 0.1);
 
   ctx.save();
-
   if (blush) {
     ctx.fillStyle = 'rgba(244, 114, 182, 0.55)';
     [-eyeOffset * 1.35, eyeOffset * 1.35].forEach(bx => {
@@ -1749,9 +2085,6 @@ function drawBasicAnimalFace(ctx, r, { blush = false, eyesOnly = false, isBlinki
   ctx.restore();
 }
 
-// ==========================================
-// THEME 3: HALLOWEEN KAWAII RENDERER 🎃
-// ==========================================
 function drawHalloweenCreature(ctx, tier, radius, options = {}) {
   const r = radius;
   ctx.save();
@@ -2010,9 +2343,6 @@ function drawHalloweenCreature(ctx, tier, radius, options = {}) {
   ctx.restore();
 }
 
-// ==========================================
-// THEME 4: OCÉANO KAWAII RENDERER 🌊
-// ==========================================
 function drawMarineCreature(ctx, tier, radius, options = {}) {
   const r = radius;
   ctx.save();
@@ -2021,7 +2351,6 @@ function drawMarineCreature(ctx, tier, radius, options = {}) {
   ctx.shadowOffsetY = Math.max(2, r * 0.1);
 
   if (tier === 0) {
-    // 0: Camaroncito (Shrimp)
     ctx.beginPath();
     ctx.arc(0, 0, r, 0, Math.PI * 2);
     const grad = ctx.createRadialGradient(-r * 0.3, -r * 0.3, r * 0.1, 0, 0, r);
@@ -2032,7 +2361,6 @@ function drawMarineCreature(ctx, tier, radius, options = {}) {
     ctx.fill();
     ctx.shadowColor = 'transparent';
 
-    // Whiskers
     ctx.strokeStyle = '#db2777';
     ctx.lineWidth = Math.max(1.5, r * 0.06);
     ctx.beginPath();
@@ -2044,8 +2372,6 @@ function drawMarineCreature(ctx, tier, radius, options = {}) {
 
     drawBasicAnimalFace(ctx, r, { blush: true, isBlinking: options.blink });
   } else if (tier === 1) {
-    // 1: Pececito Dorado (Goldfish)
-    // Tail fin
     ctx.fillStyle = '#ea580c';
     ctx.beginPath();
     ctx.moveTo(-r * 0.7, 0);
@@ -2067,8 +2393,6 @@ function drawMarineCreature(ctx, tier, radius, options = {}) {
 
     drawBasicAnimalFace(ctx, r, { blush: true, isBlinking: options.blink });
   } else if (tier === 2) {
-    // 2: Cangrejito (Crab)
-    // 2 Pincers
     [-r * 0.75, r * 0.75].forEach(cx => {
       ctx.fillStyle = '#dc2626';
       ctx.beginPath();
@@ -2095,7 +2419,6 @@ function drawMarineCreature(ctx, tier, radius, options = {}) {
 
     drawBasicAnimalFace(ctx, r, { blush: true, isBlinking: options.blink });
   } else if (tier === 4) {
-    // 4: Medusita (Jellyfish)
     ctx.beginPath();
     ctx.arc(0, 0, r, 0, Math.PI * 2);
     const grad = ctx.createRadialGradient(-r * 0.3, -r * 0.3, r * 0.1, 0, 0, r);
@@ -2106,7 +2429,6 @@ function drawMarineCreature(ctx, tier, radius, options = {}) {
     ctx.fill();
     ctx.shadowColor = 'transparent';
 
-    // Wavy tentacles at bottom
     ctx.strokeStyle = '#db2777';
     ctx.lineWidth = Math.max(1.8, r * 0.08);
     [-0.4, -0.15, 0.15, 0.4].forEach(tx => {
@@ -2118,7 +2440,6 @@ function drawMarineCreature(ctx, tier, radius, options = {}) {
 
     drawBasicAnimalFace(ctx, r, { blush: true, isBlinking: options.blink });
   } else if (tier === 5) {
-    // 5: Pulpito (Octopus)
     ctx.beginPath();
     ctx.arc(0, 0, r, 0, Math.PI * 2);
     const grad = ctx.createRadialGradient(-r * 0.3, -r * 0.3, r * 0.1, 0, 0, r);
@@ -2129,7 +2450,6 @@ function drawMarineCreature(ctx, tier, radius, options = {}) {
     ctx.fill();
     ctx.shadowColor = 'transparent';
 
-    // Round suction tentacle bumps at bottom
     ctx.fillStyle = '#9333ea';
     [-0.5, -0.2, 0.2, 0.5].forEach(tx => {
       ctx.beginPath();
@@ -2139,8 +2459,6 @@ function drawMarineCreature(ctx, tier, radius, options = {}) {
 
     drawBasicAnimalFace(ctx, r, { blush: true, isBlinking: options.blink });
   } else if (tier === 6) {
-    // 6: Tortuguita (Sea Turtle)
-    // Flippers
     ctx.fillStyle = '#16a34a';
     [-r * 0.85, r * 0.85].forEach(fx => {
       ctx.beginPath();
@@ -2158,7 +2476,6 @@ function drawMarineCreature(ctx, tier, radius, options = {}) {
     ctx.fill();
     ctx.shadowColor = 'transparent';
 
-    // Shell pattern hexagon
     ctx.strokeStyle = '#15803d';
     ctx.lineWidth = Math.max(1.8, r * 0.06);
     ctx.beginPath();
@@ -2167,7 +2484,6 @@ function drawMarineCreature(ctx, tier, radius, options = {}) {
 
     drawBasicAnimalFace(ctx, r, { blush: true, isBlinking: options.blink });
   } else if (tier === 13) {
-    // 13: Gran Ballena Azul (Giant Whale)
     ctx.beginPath();
     ctx.arc(0, 0, r, 0, Math.PI * 2);
     const grad = ctx.createRadialGradient(-r * 0.3, -r * 0.3, r * 0.1, 0, 0, r);
@@ -2178,13 +2494,11 @@ function drawMarineCreature(ctx, tier, radius, options = {}) {
     ctx.fill();
     ctx.shadowColor = 'transparent';
 
-    // White belly
     ctx.fillStyle = '#f8fafc';
     ctx.beginPath();
     ctx.ellipse(0, r * 0.45, r * 0.75, r * 0.4, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // Water spout fountain on head!
     ctx.strokeStyle = '#67e8f9';
     ctx.lineWidth = Math.max(2, r * 0.08);
     ctx.lineCap = 'round';
@@ -2199,7 +2513,6 @@ function drawMarineCreature(ctx, tier, radius, options = {}) {
 
     drawBasicAnimalFace(ctx, r, { blush: true, isBlinking: options.blink });
   } else {
-    // Generic cute marine creatures
     ctx.beginPath();
     ctx.arc(0, 0, r, 0, Math.PI * 2);
     const config = THEME_OCEAN[tier] || THEME_OCEAN[0];
@@ -2214,7 +2527,6 @@ function drawMarineCreature(ctx, tier, radius, options = {}) {
     drawBasicAnimalFace(ctx, r, { blush: true, isBlinking: options.blink });
   }
 
-  // Specular sheen
   ctx.save();
   ctx.beginPath();
   ctx.rotate(-Math.PI / 4.2);
@@ -2305,11 +2617,23 @@ function drawAnimeFace(ctx, tier, r, isBlinking = false) {
   ctx.restore();
 }
 
-// --- Main Game Loop ---
+// --- Main Game Loop with Screen Shake & Lightning Flash ---
 function gameLoop() {
   const context = render.context;
   const bodies = Matter.Composite.allBodies(engine.world);
   const activeItems = getActiveItems();
+
+  // Screen Shake calculation
+  let shakeX = 0, shakeY = 0;
+  if (screenShake > 0) {
+    shakeX = (Math.random() - 0.5) * screenShake;
+    shakeY = (Math.random() - 0.5) * screenShake;
+    screenShake *= 0.88;
+    if (screenShake < 0.3) screenShake = 0;
+  }
+
+  context.save();
+  context.translate(shakeX, shakeY);
 
   aimX += (targetAimX - aimX) * 0.35;
 
@@ -2400,6 +2724,16 @@ function gameLoop() {
   }
 
   updateAndDrawVFX(context);
+
+  // Lightning Screen Flash
+  if (screenFlash > 0) {
+    context.fillStyle = `rgba(255, 255, 255, ${screenFlash * 0.65})`;
+    context.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+    screenFlash *= 0.84;
+    if (screenFlash < 0.02) screenFlash = 0;
+  }
+
+  context.restore();
 }
 
 function triggerGameOver() {
@@ -2466,51 +2800,72 @@ async function loadLeaderboard() {
   });
 }
 
-// --- Interactive Aim & Drop Controls (Fixed: No accidental drops on UI buttons) ---
+// --- Interactive Aim & Drop Controls with Power-up Targeting ---
 function setupInput() {
-  function getXFromEvent(e) {
+  function getPosFromEvent(e) {
     const rect = gameContainer.getBoundingClientRect();
     const clientX = e.touches && e.touches.length > 0 ? e.touches[0].clientX : e.clientX;
-    return clientX - rect.left;
+    const clientY = e.touches && e.touches.length > 0 ? e.touches[0].clientY : e.clientY;
+    return {
+      x: clientX - rect.left,
+      y: clientY - rect.top
+    };
   }
 
-  function isInteractiveTarget(e) {
-    return e.target.closest('button') || e.target.closest('input') || e.target.closest('.theme-switch-container');
+  function isInteractiveUI(e) {
+    return e.target.closest('button') || e.target.closest('input') || e.target.closest('.theme-switch-container') || e.target.closest('.powerups-container');
   }
 
   gameContainer.addEventListener('mousedown', (e) => {
-    if (isInteractiveTarget(e)) return;
+    if (isInteractiveUI(e)) return;
+    const pos = getPosFromEvent(e);
+
+    // If power-up is active, handle targeting
+    if (activePowerup) {
+      handlePowerupTargeting(pos.x, pos.y);
+      return;
+    }
+
     isPointerDown = true;
-    targetAimX = getXFromEvent(e);
+    targetAimX = pos.x;
   });
 
   gameContainer.addEventListener('touchstart', (e) => {
-    if (isInteractiveTarget(e)) return;
+    if (isInteractiveUI(e)) return;
     e.preventDefault();
+    const pos = getPosFromEvent(e);
+
+    if (activePowerup) {
+      handlePowerupTargeting(pos.x, pos.y);
+      return;
+    }
+
     isPointerDown = true;
-    targetAimX = getXFromEvent(e);
+    targetAimX = pos.x;
   }, { passive: false });
 
   window.addEventListener('mousemove', (e) => {
     if (isPointerDown) {
-      targetAimX = getXFromEvent(e);
+      const pos = getPosFromEvent(e);
+      targetAimX = pos.x;
     }
   });
 
   window.addEventListener('touchmove', (e) => {
     if (isPointerDown) {
-      targetAimX = getXFromEvent(e);
+      const pos = getPosFromEvent(e);
+      targetAimX = pos.x;
     }
   }, { passive: false });
 
-  window.addEventListener('mouseup', (e) => {
+  window.addEventListener('mouseup', () => {
     if (isPointerDown) {
       isPointerDown = false;
       dropCurrentItem();
     }
   });
 
-  window.addEventListener('touchend', (e) => {
+  window.addEventListener('touchend', () => {
     if (isPointerDown) {
       isPointerDown = false;
       dropCurrentItem();
@@ -2541,6 +2896,44 @@ function setupInput() {
       btn.innerText = 'Guardar Puntaje';
     }
   });
+}
+
+// Power-up targeting click handler
+function handlePowerupTargeting(x, y) {
+  const bodies = Matter.Composite.allBodies(engine.world);
+  const clickedBodies = Matter.Query.point(bodies, { x, y });
+  const targetBody = clickedBodies.find(b => b.fruitTier !== undefined || b.isRock);
+
+  if (!targetBody) return;
+
+  if (activePowerup === 'zap') {
+    triggerLightningStrike(targetBody.position.x, targetBody.position.y, targetBody);
+    powerupZapCount--;
+    powerupZapBadge.innerText = powerupZapCount;
+    if (powerupZapCount <= 0) {
+      powerupZapBtn.classList.add('disabled');
+    }
+  } else if (activePowerup === 'magic') {
+    if (targetBody.fruitTier !== undefined) {
+      const activeItems = getActiveItems();
+      if (targetBody.fruitTier < activeItems.length - 1) {
+        targetBody.fruitTier++;
+        playMergeSound(targetBody.fruitTier, currentTheme);
+        spawnMergeVFX(targetBody.position.x, targetBody.position.y, activeItems[targetBody.fruitTier]);
+      }
+    }
+    powerupMagicCount--;
+    powerupMagicBadge.innerText = powerupMagicCount;
+    if (powerupMagicCount <= 0) {
+      powerupMagicBtn.classList.add('disabled');
+    }
+  }
+
+  // Deactivate powerup mode
+  activePowerup = null;
+  powerupZapBtn.classList.remove('active-powerup');
+  powerupMagicBtn.classList.remove('active-powerup');
+  actionToast.classList.add('hidden');
 }
 
 // Start Game
