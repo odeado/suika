@@ -27,11 +27,15 @@
           </div>
         </div>
 
-        <!-- Theme Toggle Button at top center -->
+        <!-- Theme & Figurines Controls at top center -->
         <div class="theme-switch-container">
           <button id="theme-toggle-btn" class="theme-switch-btn" title="Cambiar Tema" type="button">
             <span id="theme-toggle-icon">🐮</span>
             <span id="theme-toggle-label">Granja</span>
+          </button>
+          <button id="gallery-toggle-btn" class="theme-switch-btn gallery-btn" title="Ver Colección de Figuritas" type="button">
+            <span>👀</span>
+            <span>Figuritas</span>
           </button>
         </div>
 
@@ -69,6 +73,24 @@
         <div id="action-toast" class="action-toast hidden">
           <span id="action-toast-text">¡Toca un objeto para destruirlo con el rayo!</span>
         </div>
+      </div>
+    </div>
+
+    <!-- Figurines Evolution Guide Modal -->
+    <div id="figurines-modal" class="hidden">
+      <div class="figurines-modal-content">
+        <div class="figurines-header">
+          <div style="text-align: left;">
+            <h2 id="figurines-modal-title">Colección de Figuritas</h2>
+            <div id="figurines-modal-theme" style="font-size: 12px; color: #ea580c; font-weight: 800;">Tema Activo</div>
+          </div>
+          <button id="close-figurines-btn" class="close-modal-btn" type="button" title="Cerrar">✕</button>
+        </div>
+        <p class="figurines-subtitle">¡Evolucionan en este orden! Junta dos iguales para desbloquear la siguiente:</p>
+        <div id="figurines-list" class="figurines-grid">
+          <!-- Figurines rendered dynamically -->
+        </div>
+        <button id="close-figurines-footer-btn" class="menu-btn" style="margin-top: 14px;" type="button">¡Volver al Juego!</button>
       </div>
     </div>
     

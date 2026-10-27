@@ -397,19 +397,19 @@ const THEME_ANIMALS = [
 
 const THEME_HALLOWEEN = [
   { name: "Caramelo", radius: 12 * scaleFactor, color: '#f97316', points: 1 },
-  { name: "Ojito", radius: 16 * scaleFactor, color: '#e2e8f0', points: 3 },
-  { name: "Arañita", radius: 22 * scaleFactor, color: '#581c87', points: 6 },
-  { name: "Murcielaguito", radius: 29 * scaleFactor, color: '#7c3aed', points: 10 },
-  { name: "Poción Mágica", radius: 37 * scaleFactor, color: '#22c55e', points: 15 },
+  { name: "Ojito", radius: 16 * scaleFactor, color: '#06b6d4', points: 3 },
+  { name: "Arañita", radius: 22 * scaleFactor, color: '#1e293b', points: 6 },
+  { name: "Murcielaguito", radius: 29 * scaleFactor, color: '#1d4ed8', points: 10 },
+  { name: "Poción Mágica", radius: 37 * scaleFactor, color: '#10b981', points: 15 },
   { name: "Fantasmita", radius: 46 * scaleFactor, color: '#f8fafc', points: 21 },
-  { name: "Frankie", radius: 56 * scaleFactor, color: '#86efac', points: 28 },
-  { name: "Brujita", radius: 68 * scaleFactor, color: '#9333ea', points: 36 },
+  { name: "Frankie", radius: 56 * scaleFactor, color: '#84cc16', points: 28 },
+  { name: "Brujita", radius: 68 * scaleFactor, color: '#ea580c', points: 36 },
   { name: "Vampirito", radius: 80 * scaleFactor, color: '#dc2626', points: 45 },
-  { name: "Calaverita", radius: 93 * scaleFactor, color: '#f8fafc', points: 55 },
+  { name: "Calaverita", radius: 93 * scaleFactor, color: '#f1f5f9', points: 55 },
   { name: "Gatito Negro", radius: 107 * scaleFactor, color: '#0f172a', points: 66 },
-  { name: "Momia", radius: 121 * scaleFactor, color: '#fef3c7', points: 78 },
-  { name: "Hombre Lobo", radius: 135 * scaleFactor, color: '#64748b', points: 95 },
-  { name: "Gran Calabaza", radius: 148 * scaleFactor, color: '#ea580c', points: 120 },
+  { name: "Momia", radius: 121 * scaleFactor, color: '#fde047', points: 78 },
+  { name: "Hombre Lobo", radius: 135 * scaleFactor, color: '#78350f', points: 95 },
+  { name: "Gran Calabaza", radius: 148 * scaleFactor, color: '#f97316', points: 120 },
 ];
 
 const THEME_OCEAN = [
@@ -567,6 +567,7 @@ function init() {
   setupInput();
   setupMultiplayerUI();
   setupThemeControls();
+  setupFigurinesModal();
   setupPWAButtons();
   setupPowerups();
 
@@ -613,6 +614,10 @@ function switchTheme(newTheme) {
   applyThemeUI();
   rollNextFruit();
   restartThemeBGM();
+  const figurinesModal = document.getElementById('figurines-modal');
+  if (figurinesModal && !figurinesModal.classList.contains('hidden')) {
+    renderFigurinesModal();
+  }
 }
 
 function setupThemeControls() {
@@ -641,6 +646,97 @@ function setupThemeControls() {
   if (animalCard) animalCard.addEventListener('click', () => switchTheme('animals'));
   if (halloweenCard) halloweenCard.addEventListener('click', () => switchTheme('halloween'));
   if (oceanCard) oceanCard.addEventListener('click', () => switchTheme('ocean'));
+}
+
+function renderFigurinesModal() {
+  const activeItems = getActiveItems();
+  const listEl = document.getElementById('figurines-list');
+  const themeSub = document.getElementById('figurines-modal-theme');
+  if (!listEl) return;
+
+  const names = {
+    fruits: '🍉 Frutas de Playa',
+    animals: '🐮 Granja Kawaii',
+    halloween: '🎃 Noche de Halloween',
+    ocean: '🌊 Reino Marino'
+  };
+  if (themeSub) themeSub.innerText = names[currentTheme] || 'Tema Actual';
+
+  listEl.innerHTML = '';
+
+  activeItems.forEach((item, index) => {
+    const card = document.createElement('div');
+    card.className = 'figurine-card';
+    card.title = `${item.name} (+${item.points} pts) - ¡Toca para oír su sonido!`;
+
+    const rank = document.createElement('div');
+    rank.className = 'figurine-card-rank';
+    rank.innerText = `#${index + 1}`;
+
+    const canvas = document.createElement('canvas');
+    canvas.className = 'figurine-card-canvas';
+    canvas.width = 76;
+    canvas.height = 76;
+    const ctx = canvas.getContext('2d');
+    ctx.translate(38, 38);
+    const prevR = Math.min(27, 15 + index * 0.95);
+    renderActiveItem(ctx, index, prevR, { blink: false });
+
+    const info = document.createElement('div');
+    info.className = 'figurine-card-info';
+    info.innerHTML = `
+      <div class="figurine-card-name">${item.name}</div>
+      <div class="figurine-card-pts">+${item.points} pts</div>
+    `;
+
+    card.appendChild(rank);
+    card.appendChild(canvas);
+    card.appendChild(info);
+
+    card.addEventListener('click', (e) => {
+      e.stopPropagation();
+      playMergeSound(index, currentTheme);
+      card.style.transform = 'scale(1.08)';
+      setTimeout(() => card.style.transform = '', 180);
+    });
+
+    listEl.appendChild(card);
+  });
+}
+
+function setupFigurinesModal() {
+  const galleryBtn = document.getElementById('gallery-toggle-btn');
+  const figurinesModal = document.getElementById('figurines-modal');
+  const closeBtn = document.getElementById('close-figurines-btn');
+  const closeFooterBtn = document.getElementById('close-figurines-footer-btn');
+
+  if (galleryBtn && figurinesModal) {
+    ['mousedown', 'touchstart', 'pointerdown'].forEach(evt => {
+      galleryBtn.addEventListener(evt, (e) => e.stopPropagation(), { passive: false });
+      figurinesModal.addEventListener(evt, (e) => e.stopPropagation(), { passive: false });
+    });
+
+    galleryBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+      renderFigurinesModal();
+      figurinesModal.classList.remove('hidden');
+    });
+
+    const closeModal = (e) => {
+      if (e) {
+        e.stopPropagation();
+        e.preventDefault();
+      }
+      figurinesModal.classList.add('hidden');
+    };
+
+    if (closeBtn) closeBtn.addEventListener('click', closeModal);
+    if (closeFooterBtn) closeFooterBtn.addEventListener('click', closeModal);
+    figurinesModal.addEventListener('click', (e) => {
+      if (e.target === figurinesModal) closeModal(e);
+    });
+  }
 }
 
 function setupPWAButtons() {
@@ -1383,12 +1479,12 @@ function drawContainer(ctx) {
     ctx.stroke();
 
   } else if (currentTheme === 'halloween') {
-    // Spooky Gothic Obsidian Glass Container
+    // Spooky Soft Obsidian Glass Container
     const boxHeight = BOX_BOTTOM - TOP_LIMIT;
     const grad = ctx.createLinearGradient(0, TOP_LIMIT, 0, BOX_BOTTOM);
-    grad.addColorStop(0, 'rgba(88, 28, 135, 0.35)');
-    grad.addColorStop(0.5, 'rgba(15, 23, 42, 0.25)');
-    grad.addColorStop(1, 'rgba(126, 34, 206, 0.35)');
+    grad.addColorStop(0, 'rgba(15, 12, 28, 0.45)');
+    grad.addColorStop(0.5, 'rgba(8, 6, 18, 0.35)');
+    grad.addColorStop(1, 'rgba(12, 10, 22, 0.55)');
     ctx.fillStyle = grad;
     ctx.fillRect(BOX_LEFT, TOP_LIMIT, BOX_WIDTH, boxHeight);
 
@@ -1397,42 +1493,42 @@ function drawContainer(ctx) {
     ctx.lineTo(BOX_LEFT, BOX_BOTTOM);
     ctx.lineTo(BOX_RIGHT, BOX_BOTTOM);
     ctx.lineTo(BOX_RIGHT, TOP_LIMIT);
-    ctx.strokeStyle = 'rgba(192, 132, 252, 0.85)';
-    ctx.lineWidth = 4;
+    ctx.strokeStyle = 'rgba(168, 85, 247, 0.65)';
+    ctx.lineWidth = 3.5;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
-    ctx.shadowColor = '#a855f7';
-    ctx.shadowBlur = 12;
+    ctx.shadowColor = 'rgba(168, 85, 247, 0.4)';
+    ctx.shadowBlur = 8;
     ctx.stroke();
 
-    // Cobwebs
+    // Subtle Spider Web in corner
     ctx.beginPath();
     ctx.moveTo(BOX_LEFT + 2, TOP_LIMIT + 35);
     ctx.lineTo(BOX_LEFT + 35, TOP_LIMIT + 2);
     ctx.moveTo(BOX_LEFT + 2, TOP_LIMIT + 20);
     ctx.lineTo(BOX_LEFT + 20, TOP_LIMIT + 2);
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.16)';
     ctx.lineWidth = 1;
     ctx.stroke();
 
-    // DYNAMIC NIGHT ATMOSPHERE: Darkness Vignette based on score
-    const nightDarkness = Math.min(0.68, currentScore / 1600);
+    // DYNAMIC NIGHT ATMOSPHERE: Soft darkness vignette
+    const nightDarkness = Math.min(0.65, currentScore / 1800);
     const vignette = ctx.createRadialGradient(
-      GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH * 0.2,
-      GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH * 0.85
+      GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH * 0.25,
+      GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH * 0.9
     );
     vignette.addColorStop(0, 'rgba(0, 0, 0, 0)');
-    vignette.addColorStop(1, `rgba(5, 2, 15, ${nightDarkness})`);
+    vignette.addColorStop(1, `rgba(4, 3, 10, ${nightDarkness})`);
     ctx.fillStyle = vignette;
     ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
 
-    // Eerie drifting floor mist/fog
-    fogOffset += 0.4;
-    ctx.fillStyle = 'rgba(168, 85, 247, 0.12)';
+    // Eerie soft moonlight floor mist
+    fogOffset += 0.35;
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
     ctx.beginPath();
     for (let x = BOX_LEFT; x <= BOX_RIGHT; x += 30) {
-      const fogY = BOX_BOTTOM - 18 + Math.sin((x + fogOffset) * 0.05) * 8;
-      ctx.arc(x, fogY, 22, 0, Math.PI * 2);
+      const fogY = BOX_BOTTOM - 16 + Math.sin((x + fogOffset) * 0.05) * 6;
+      ctx.arc(x, fogY, 20, 0, Math.PI * 2);
     }
     ctx.fill();
 
@@ -2152,76 +2248,117 @@ function drawBasicAnimalFace(ctx, r, { blush = false, eyesOnly = false, isBlinki
 function drawHalloweenCreature(ctx, tier, radius, options = {}) {
   const r = radius;
   ctx.save();
-  ctx.shadowColor = 'rgba(0, 0, 0, 0.2)';
+  ctx.shadowColor = 'rgba(0, 0, 0, 0.25)';
   ctx.shadowBlur = Math.max(4, r * 0.2);
   ctx.shadowOffsetY = Math.max(2, r * 0.1);
 
   if (tier === 0) {
+    // 🍬 0: Caramelo de Halloween (Candy Corn Tri-color)
     ctx.beginPath();
     ctx.arc(0, 0, r, 0, Math.PI * 2);
     ctx.fillStyle = '#f97316';
     ctx.fill();
     ctx.shadowColor = 'transparent';
 
-    ctx.fillStyle = '#fde047';
+    // Yellow bottom band
+    ctx.fillStyle = '#facc15';
     ctx.beginPath();
-    ctx.arc(0, 0, r, Math.PI * 0.2, Math.PI * 0.8);
+    ctx.arc(0, 0, r, Math.PI * 0.22, Math.PI * 0.78);
+    ctx.closePath();
     ctx.fill();
 
+    // White top tip
     ctx.fillStyle = '#ffffff';
     ctx.beginPath();
     ctx.arc(0, 0, r, Math.PI * 1.25, Math.PI * 1.75);
+    ctx.closePath();
     ctx.fill();
 
     drawBasicAnimalFace(ctx, r, { blush: true, isBlinking: options.blink });
+
   } else if (tier === 1) {
+    // 👁️ 1: Ojito Kawaii (Cyan/Turquoise glow, NO purple!)
     ctx.beginPath();
     ctx.arc(0, 0, r, 0, Math.PI * 2);
     ctx.fillStyle = '#f8fafc';
     ctx.fill();
     ctx.shadowColor = 'transparent';
 
-    ctx.fillStyle = '#9333ea';
+    // Glowing cyan/aqua iris
+    const irisGrad = ctx.createRadialGradient(0, 0, r * 0.1, 0, 0, r * 0.5);
+    irisGrad.addColorStop(0, '#67e8f9');
+    irisGrad.addColorStop(0.7, '#06b6d4');
+    irisGrad.addColorStop(1, '#0e7490');
+    ctx.fillStyle = irisGrad;
     ctx.beginPath();
-    ctx.arc(0, 0, r * 0.48, 0, Math.PI * 2);
+    ctx.arc(0, 0, r * 0.5, 0, Math.PI * 2);
     ctx.fill();
 
+    // Deep black pupil
     ctx.fillStyle = '#0f172a';
     ctx.beginPath();
-    ctx.arc(0, 0, r * 0.26, 0, Math.PI * 2);
+    ctx.arc(0, 0, r * 0.27, 0, Math.PI * 2);
     ctx.fill();
 
+    // Sparkle highlights
     ctx.fillStyle = '#ffffff';
     ctx.beginPath();
-    ctx.arc(-r * 0.12, -r * 0.12, r * 0.12, 0, Math.PI * 2);
+    ctx.arc(-r * 0.14, -r * 0.14, r * 0.12, 0, Math.PI * 2);
     ctx.fill();
+    ctx.beginPath();
+    ctx.arc(r * 0.12, r * 0.1, r * 0.05, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Rosy cheek blush
+    ctx.fillStyle = 'rgba(244, 63, 94, 0.45)';
+    ctx.beginPath();
+    ctx.arc(-r * 0.55, r * 0.28, r * 0.15, 0, Math.PI * 2);
+    ctx.arc(r * 0.55, r * 0.28, r * 0.15, 0, Math.PI * 2);
+    ctx.fill();
+
   } else if (tier === 2) {
-    ctx.strokeStyle = '#581c87';
+    // 🕷️ 2: Arañita Tejedora (Velvet Slate Black - NO purple!)
+    // 8 cute spider legs
+    ctx.strokeStyle = '#334155';
     ctx.lineWidth = Math.max(2, r * 0.08);
     ctx.lineCap = 'round';
     [-1, 1].forEach(dir => {
       [-0.4, -0.1, 0.2, 0.5].forEach(ang => {
         ctx.beginPath();
-        ctx.moveTo(dir * r * 0.8, r * ang);
-        ctx.lineTo(dir * (r * 1.3), r * ang - r * 0.2);
+        ctx.moveTo(dir * r * 0.75, r * ang);
+        ctx.lineTo(dir * (r * 1.25), r * ang - r * 0.2);
         ctx.lineTo(dir * (r * 1.45), r * ang + r * 0.2);
         ctx.stroke();
       });
     });
 
+    // Body
     ctx.beginPath();
     ctx.arc(0, 0, r, 0, Math.PI * 2);
     const grad = ctx.createRadialGradient(-r * 0.3, -r * 0.3, r * 0.1, 0, 0, r);
-    grad.addColorStop(0, '#a855f7');
-    grad.addColorStop(0.7, '#6b21a8');
-    grad.addColorStop(1, '#3b0764');
+    grad.addColorStop(0, '#475569');
+    grad.addColorStop(0.7, '#1e293b');
+    grad.addColorStop(1, '#0f172a');
     ctx.fillStyle = grad;
     ctx.fill();
     ctx.shadowColor = 'transparent';
 
+    // Cute fangs
+    ctx.fillStyle = '#ffffff';
+    [-r * 0.08, r * 0.08].forEach(fx => {
+      ctx.beginPath();
+      ctx.moveTo(fx - r * 0.04, r * 0.16);
+      ctx.lineTo(fx + r * 0.04, r * 0.16);
+      ctx.lineTo(fx, r * 0.28);
+      ctx.fill();
+    });
+
     drawBasicAnimalFace(ctx, r, { blush: true, isBlinking: options.blink });
+
   } else if (tier === 3) {
-    ctx.fillStyle = '#4c1d95';
+    // 🦇 3: Murcielaguito (Midnight Royal Blue - NO purple!)
+    // Cute bat wings
+    ctx.fillStyle = '#1e3a8a';
     [-1, 1].forEach(dir => {
       ctx.beginPath();
       ctx.moveTo(dir * r * 0.6, 0);
@@ -2231,74 +2368,143 @@ function drawHalloweenCreature(ctx, tier, radius, options = {}) {
       ctx.fill();
     });
 
+    // Body
     ctx.beginPath();
     ctx.arc(0, 0, r, 0, Math.PI * 2);
     const grad = ctx.createRadialGradient(-r * 0.3, -r * 0.3, r * 0.1, 0, 0, r);
-    grad.addColorStop(0, '#a78bfa');
-    grad.addColorStop(0.7, '#7c3aed');
-    grad.addColorStop(1, '#4c1d95');
+    grad.addColorStop(0, '#3b82f6');
+    grad.addColorStop(0.7, '#1d4ed8');
+    grad.addColorStop(1, '#172554');
     ctx.fillStyle = grad;
     ctx.fill();
     ctx.shadowColor = 'transparent';
 
-    [-r * 0.5, r * 0.5].forEach(ex => {
-      ctx.fillStyle = '#6d28d9';
+    // Pointy bat ears
+    [-r * 0.45, r * 0.45].forEach(ex => {
+      ctx.fillStyle = '#1e40af';
       ctx.beginPath();
       ctx.moveTo(ex - r * 0.15, -r * 0.7);
-      ctx.lineTo(ex, -r * 1.15);
+      ctx.lineTo(ex, -r * 1.2);
       ctx.lineTo(ex + r * 0.15, -r * 0.7);
+      ctx.fill();
+      ctx.fillStyle = '#f472b6';
+      ctx.beginPath();
+      ctx.moveTo(ex - r * 0.08, -r * 0.75);
+      ctx.lineTo(ex, -r * 1.05);
+      ctx.lineTo(ex + r * 0.08, -r * 0.75);
       ctx.fill();
     });
 
+    // Tiny white fangs
     ctx.fillStyle = '#ffffff';
     [-r * 0.08, r * 0.08].forEach(fx => {
       ctx.beginPath();
-      ctx.moveTo(fx - r * 0.04, r * 0.18);
-      ctx.lineTo(fx + r * 0.04, r * 0.18);
+      ctx.moveTo(fx - r * 0.04, r * 0.16);
+      ctx.lineTo(fx + r * 0.04, r * 0.16);
       ctx.lineTo(fx, r * 0.28);
       ctx.fill();
     });
 
     drawBasicAnimalFace(ctx, r, { blush: true, isBlinking: options.blink });
+
+  } else if (tier === 4) {
+    // 🧪 4: Poción Mágica (Neon Acid Toxic Green Liquid & Cork)
+    ctx.beginPath();
+    ctx.arc(0, 0, r, 0, Math.PI * 2);
+    const flaskGrad = ctx.createRadialGradient(-r * 0.3, -r * 0.3, r * 0.1, 0, 0, r);
+    flaskGrad.addColorStop(0, '#86efac');
+    flaskGrad.addColorStop(0.5, '#22c55e');
+    flaskGrad.addColorStop(0.9, '#15803d');
+    flaskGrad.addColorStop(1, '#052e16');
+    ctx.fillStyle = flaskGrad;
+    ctx.fill();
+    ctx.shadowColor = 'transparent';
+
+    // Cork on top
+    ctx.fillStyle = '#92400e';
+    ctx.beginPath();
+    ctx.roundRect(-r * 0.25, -r * 1.15, r * 0.5, r * 0.3, 3);
+    ctx.fill();
+
+    // Floating bubble sparkles inside
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.65)';
+    [[-0.35, -0.2, 0.1], [0.3, 0.25, 0.12], [-0.1, 0.45, 0.08]].forEach(([bx, by, br]) => {
+      ctx.beginPath();
+      ctx.arc(r * bx, r * by, r * br, 0, Math.PI * 2);
+      ctx.fill();
+    });
+
+    drawBasicAnimalFace(ctx, r, { blush: true, isBlinking: options.blink });
+
   } else if (tier === 5) {
+    // 👻 5: Fantasmita Booo (Ethereal White Ghost with wavy bottom and arms)
+    // Little floating arms
+    ctx.fillStyle = '#f1f5f9';
+    [-1, 1].forEach(dir => {
+      ctx.beginPath();
+      ctx.ellipse(dir * r * 0.95, r * 0.05, r * 0.28, r * 0.14, dir * Math.PI / 4, 0, Math.PI * 2);
+      ctx.fill();
+    });
+
+    // Body
     ctx.beginPath();
     ctx.arc(0, 0, r, 0, Math.PI * 2);
     const grad = ctx.createRadialGradient(-r * 0.3, -r * 0.3, r * 0.1, 0, 0, r);
     grad.addColorStop(0, '#ffffff');
-    grad.addColorStop(0.75, '#f1f5f9');
+    grad.addColorStop(0.75, '#f8fafc');
     grad.addColorStop(1, '#cbd5e1');
     ctx.fillStyle = grad;
     ctx.fill();
     ctx.shadowColor = 'transparent';
 
+    // Wavy ghost tail ripples at bottom
+    ctx.fillStyle = '#94a3b8';
+    ctx.beginPath();
+    for (let x = -r * 0.65; x <= r * 0.65; x += r * 0.32) {
+      ctx.arc(x, r * 0.85, r * 0.12, 0, Math.PI);
+    }
+    ctx.fill();
+
+    // Surprised open "O" mouth
     ctx.fillStyle = '#1e1b4b';
     ctx.beginPath();
     ctx.ellipse(0, r * 0.22, r * 0.14, r * 0.2, 0, 0, Math.PI * 2);
     ctx.fill();
 
     drawBasicAnimalFace(ctx, r, { blush: true, eyesOnly: true, isBlinking: options.blink });
+
   } else if (tier === 6) {
+    // 🧟 6: Frankie (Pastel Lime Frankenstein with silver neck bolts)
+    // Metallic neck bolts
+    ctx.fillStyle = '#94a3b8';
+    [-1, 1].forEach(dir => {
+      ctx.fillRect(dir * r * 0.88, r * 0.15, dir * r * 0.28, r * 0.2);
+    });
+
+    // Body
     ctx.beginPath();
     ctx.arc(0, 0, r, 0, Math.PI * 2);
     const grad = ctx.createRadialGradient(-r * 0.3, -r * 0.3, r * 0.1, 0, 0, r);
     grad.addColorStop(0, '#bbf7d0');
     grad.addColorStop(0.7, '#86efac');
-    grad.addColorStop(1, '#22c55e');
+    grad.addColorStop(1, '#16a34a');
     ctx.fillStyle = grad;
     ctx.fill();
     ctx.shadowColor = 'transparent';
 
-    ctx.fillStyle = '#1e293b';
+    // Spiky black haircut
+    ctx.fillStyle = '#0f172a';
     ctx.beginPath();
     ctx.moveTo(-r * 0.85, -r * 0.4);
     for (let x = -r * 0.85; x <= r * 0.85; x += r * 0.25) {
       ctx.lineTo(x + r * 0.12, -r * 0.95);
-      ctx.lineTo(x + r * 0.25, -r * 0.7);
+      ctx.lineTo(x + r * 0.25, -r * 0.65);
     }
     ctx.closePath();
     ctx.fill();
 
-    ctx.strokeStyle = '#1e293b';
+    // Forehead stitch scar
+    ctx.strokeStyle = '#0f172a';
     ctx.lineWidth = Math.max(1.8, r * 0.06);
     ctx.beginPath();
     ctx.moveTo(-r * 0.3, -r * 0.35);
@@ -2310,30 +2516,319 @@ function drawHalloweenCreature(ctx, tier, radius, options = {}) {
     ctx.stroke();
 
     drawBasicAnimalFace(ctx, r, { blush: true, isBlinking: options.blink });
+
   } else if (tier === 7) {
+    // 🧙 7: Brujita Traviesa (Peach skin, Orange Ginger Hair & Black Hat)
     ctx.beginPath();
     ctx.arc(0, 0, r, 0, Math.PI * 2);
     const grad = ctx.createRadialGradient(-r * 0.3, -r * 0.3, r * 0.1, 0, 0, r);
-    grad.addColorStop(0, '#f3e8ff');
-    grad.addColorStop(0.7, '#d8b4fe');
-    grad.addColorStop(1, '#9333ea');
+    grad.addColorStop(0, '#fed7aa');
+    grad.addColorStop(0.75, '#fb923c');
+    grad.addColorStop(1, '#ea580c');
     ctx.fillStyle = grad;
     ctx.fill();
     ctx.shadowColor = 'transparent';
 
-    ctx.fillStyle = '#581c87';
+    // Ginger orange braids
+    ctx.fillStyle = '#c2410c';
+    [-r * 0.65, r * 0.65].forEach(bx => {
+      ctx.beginPath();
+      ctx.arc(bx, r * 0.3, r * 0.22, 0, Math.PI * 2);
+      ctx.fill();
+    });
+
+    // Pointed black witch hat
+    ctx.fillStyle = '#18181b';
     ctx.beginPath();
-    ctx.moveTo(-r * 0.8, -r * 0.35);
-    ctx.lineTo(r * 0.8, -r * 0.35);
-    ctx.lineTo(r * 0.2, -r * 1.3);
+    ctx.moveTo(-r * 0.85, -r * 0.35);
+    ctx.lineTo(r * 0.85, -r * 0.35);
+    ctx.lineTo(r * 0.18, -r * 1.3);
     ctx.closePath();
     ctx.fill();
 
+    // Golden hat buckle
     ctx.fillStyle = '#facc15';
-    ctx.fillRect(-r * 0.15, -r * 0.52, r * 0.3, r * 0.14);
+    ctx.fillRect(-r * 0.14, -r * 0.52, r * 0.28, r * 0.14);
+    ctx.fillStyle = '#18181b';
+    ctx.fillRect(-r * 0.08, -r * 0.48, r * 0.16, r * 0.06);
 
     drawBasicAnimalFace(ctx, r, { blush: true, isBlinking: options.blink });
+
+  } else if (tier === 8) {
+    // 🧛 8: Vampirito (Crimson Cape, Widow's Peak Hair & Colmillos)
+    // High-collared crimson red cape
+    ctx.fillStyle = '#dc2626';
+    ctx.beginPath();
+    ctx.moveTo(-r * 0.95, -r * 0.4);
+    ctx.lineTo(-r * 0.7, r * 0.85);
+    ctx.lineTo(r * 0.7, r * 0.85);
+    ctx.lineTo(r * 0.95, -r * 0.4);
+    ctx.closePath();
+    ctx.fill();
+
+    // Face
+    ctx.beginPath();
+    ctx.arc(0, 0, r * 0.88, 0, Math.PI * 2);
+    const faceGrad = ctx.createRadialGradient(-r * 0.2, -r * 0.2, r * 0.1, 0, 0, r * 0.88);
+    faceGrad.addColorStop(0, '#ffffff');
+    faceGrad.addColorStop(0.8, '#f1f5f9');
+    faceGrad.addColorStop(1, '#cbd5e1');
+    ctx.fillStyle = faceGrad;
+    ctx.fill();
+    ctx.shadowColor = 'transparent';
+
+    // Black widow's peak hair
+    ctx.fillStyle = '#0f172a';
+    ctx.beginPath();
+    ctx.moveTo(-r * 0.8, -r * 0.3);
+    ctx.quadraticCurveTo(0, -r * 0.95, r * 0.8, -r * 0.3);
+    ctx.lineTo(r * 0.5, -r * 0.45);
+    ctx.lineTo(0, -r * 0.3);
+    ctx.lineTo(-r * 0.5, -r * 0.45);
+    ctx.closePath();
+    ctx.fill();
+
+    // Red bowtie
+    ctx.fillStyle = '#b91c1c';
+    ctx.beginPath();
+    ctx.moveTo(-r * 0.18, r * 0.45);
+    ctx.lineTo(r * 0.18, r * 0.58);
+    ctx.lineTo(-r * 0.18, r * 0.58);
+    ctx.lineTo(r * 0.18, r * 0.45);
+    ctx.closePath();
+    ctx.fill();
+
+    // Fangs
+    ctx.fillStyle = '#ffffff';
+    [-r * 0.09, r * 0.09].forEach(fx => {
+      ctx.beginPath();
+      ctx.moveTo(fx - r * 0.04, r * 0.18);
+      ctx.lineTo(fx + r * 0.04, r * 0.18);
+      ctx.lineTo(fx, r * 0.3);
+      ctx.fill();
+    });
+
+    drawBasicAnimalFace(ctx, r * 0.88, { blush: true, isBlinking: options.blink });
+
+  } else if (tier === 9) {
+    // 💀 9: Calaverita Festiva (Sugar Skull / Calavera de Día de Muertos)
+    ctx.beginPath();
+    ctx.arc(0, 0, r, 0, Math.PI * 2);
+    const grad = ctx.createRadialGradient(-r * 0.3, -r * 0.3, r * 0.1, 0, 0, r);
+    grad.addColorStop(0, '#ffffff');
+    grad.addColorStop(0.7, '#f8fafc');
+    grad.addColorStop(1, '#e2e8f0');
+    ctx.fillStyle = grad;
+    ctx.fill();
+    ctx.shadowColor = 'transparent';
+
+    // Cyan & Pink flower petals around eyes
+    [-r * 0.32, r * 0.32].forEach((ex, i) => {
+      const petalCol = i === 0 ? '#06b6d4' : '#ec4899';
+      for (let a = 0; a < Math.PI * 2; a += Math.PI / 4) {
+        ctx.fillStyle = petalCol;
+        ctx.beginPath();
+        ctx.arc(ex + Math.cos(a) * r * 0.22, -r * 0.08 + Math.sin(a) * r * 0.22, r * 0.07, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      // Black eye sockets
+      ctx.fillStyle = '#0f172a';
+      ctx.beginPath();
+      ctx.arc(ex, -r * 0.08, r * 0.15, 0, Math.PI * 2);
+      ctx.fill();
+      // White eye gleam
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(ex - r * 0.04, -r * 0.12, r * 0.04, 0, Math.PI * 2);
+      ctx.fill();
+    });
+
+    // Inverted heart nose
+    ctx.fillStyle = '#0f172a';
+    ctx.beginPath();
+    ctx.moveTo(0, r * 0.06);
+    ctx.lineTo(-r * 0.08, r * 0.18);
+    ctx.lineTo(r * 0.08, r * 0.18);
+    ctx.closePath();
+    ctx.fill();
+
+    // Stitched skeletal tooth smile
+    ctx.strokeStyle = '#0f172a';
+    ctx.lineWidth = Math.max(1.8, r * 0.05);
+    ctx.beginPath();
+    ctx.moveTo(-r * 0.3, r * 0.35);
+    ctx.lineTo(r * 0.3, r * 0.35);
+    [-0.2, -0.1, 0, 0.1, 0.2].forEach(tx => {
+      ctx.moveTo(r * tx, r * 0.28);
+      ctx.lineTo(r * tx, r * 0.42);
+    });
+    ctx.stroke();
+
+  } else if (tier === 10) {
+    // 🐈‍⬛ 10: Gatito Negro Místico (Jet Black Cat with glowing golden eyes & whiskers)
+    // Pointed ears with pink insides
+    [-r * 0.5, r * 0.5].forEach(ex => {
+      ctx.fillStyle = '#0f172a';
+      ctx.beginPath();
+      ctx.moveTo(ex - r * 0.2, -r * 0.6);
+      ctx.lineTo(ex, -r * 1.15);
+      ctx.lineTo(ex + r * 0.2, -r * 0.6);
+      ctx.fill();
+      ctx.fillStyle = '#f472b6';
+      ctx.beginPath();
+      ctx.moveTo(ex - r * 0.1, -r * 0.65);
+      ctx.lineTo(ex, -r * 0.98);
+      ctx.lineTo(ex + r * 0.1, -r * 0.65);
+      ctx.fill();
+    });
+
+    // Body
+    ctx.beginPath();
+    ctx.arc(0, 0, r, 0, Math.PI * 2);
+    const grad = ctx.createRadialGradient(-r * 0.3, -r * 0.3, r * 0.1, 0, 0, r);
+    grad.addColorStop(0, '#334155');
+    grad.addColorStop(0.65, '#0f172a');
+    grad.addColorStop(1, '#020617');
+    ctx.fillStyle = grad;
+    ctx.fill();
+    ctx.shadowColor = 'transparent';
+
+    // Huge glowing golden topaz eyes
+    [-r * 0.32, r * 0.32].forEach(ex => {
+      ctx.fillStyle = '#facc15';
+      ctx.beginPath();
+      ctx.ellipse(ex, -r * 0.06, r * 0.18, r * 0.22, 0, 0, Math.PI * 2);
+      ctx.fill();
+      // Slit pupil
+      ctx.fillStyle = '#0f172a';
+      ctx.beginPath();
+      ctx.ellipse(ex, -r * 0.06, r * 0.06, r * 0.18, 0, 0, Math.PI * 2);
+      ctx.fill();
+      // Gleam
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(ex - r * 0.06, -r * 0.12, r * 0.05, 0, Math.PI * 2);
+      ctx.fill();
+    });
+
+    // Pink nose
+    ctx.fillStyle = '#fb7185';
+    ctx.beginPath();
+    ctx.moveTo(0, r * 0.12);
+    ctx.lineTo(-r * 0.06, r * 0.06);
+    ctx.lineTo(r * 0.06, r * 0.06);
+    ctx.closePath();
+    ctx.fill();
+
+    // White whiskers
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
+    ctx.lineWidth = Math.max(1.5, r * 0.035);
+    [-1, 1].forEach(dir => {
+      ctx.beginPath();
+      ctx.moveTo(dir * r * 0.2, r * 0.12);
+      ctx.lineTo(dir * r * 0.65, r * 0.06);
+      ctx.moveTo(dir * r * 0.2, r * 0.18);
+      ctx.lineTo(dir * r * 0.65, r * 0.24);
+      ctx.stroke();
+    });
+
+  } else if (tier === 11) {
+    // 🩹 11: Momia (Warm Golden Sand Bandages with glowing curious eyes)
+    ctx.beginPath();
+    ctx.arc(0, 0, r, 0, Math.PI * 2);
+    const grad = ctx.createRadialGradient(-r * 0.3, -r * 0.3, r * 0.1, 0, 0, r);
+    grad.addColorStop(0, '#fef9c3');
+    grad.addColorStop(0.7, '#fde047');
+    grad.addColorStop(1, '#ca8a04');
+    ctx.fillStyle = grad;
+    ctx.fill();
+    ctx.shadowColor = 'transparent';
+
+    // Horizontal bandage strips
+    ctx.strokeStyle = '#a16207';
+    ctx.lineWidth = Math.max(1.8, r * 0.05);
+    [-0.6, -0.3, 0.1, 0.35, 0.6].forEach(by => {
+      ctx.beginPath();
+      ctx.moveTo(-r * 0.8, r * by);
+      ctx.lineTo(r * 0.8, r * by + r * 0.08);
+      ctx.stroke();
+    });
+
+    // Dark eye slot slit
+    ctx.fillStyle = '#1e1b4b';
+    ctx.beginPath();
+    ctx.roundRect(-r * 0.6, -r * 0.2, r * 1.2, r * 0.32, 6);
+    ctx.fill();
+
+    // Glowing golden curious eyes
+    [-r * 0.22, r * 0.22].forEach(ex => {
+      ctx.fillStyle = '#fef08a';
+      ctx.beginPath();
+      ctx.arc(ex, -r * 0.04, r * 0.1, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#1e1b4b';
+      ctx.beginPath();
+      ctx.arc(ex, -r * 0.04, r * 0.045, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(ex - r * 0.03, -r * 0.07, r * 0.025, 0, Math.PI * 2);
+      ctx.fill();
+    });
+
+  } else if (tier === 12) {
+    // 🐺 12: Hombre Lobo (Werewolf: Chocolate Brown Fur with fangs & fluffy ears)
+    // Fluffy ears
+    [-r * 0.55, r * 0.55].forEach(ex => {
+      ctx.fillStyle = '#78350f';
+      ctx.beginPath();
+      ctx.moveTo(ex - r * 0.2, -r * 0.55);
+      ctx.lineTo(ex, -r * 1.15);
+      ctx.lineTo(ex + r * 0.2, -r * 0.55);
+      ctx.fill();
+      ctx.fillStyle = '#fed7aa';
+      ctx.beginPath();
+      ctx.moveTo(ex - r * 0.1, -r * 0.65);
+      ctx.lineTo(ex, -r * 0.98);
+      ctx.lineTo(ex + r * 0.1, -r * 0.65);
+      ctx.fill();
+    });
+
+    // Fluffy cheek tufts
+    ctx.fillStyle = '#92400e';
+    [-1, 1].forEach(dir => {
+      ctx.beginPath();
+      ctx.moveTo(dir * r * 0.7, r * 0.1);
+      ctx.lineTo(dir * (r * 1.15), r * 0.25);
+      ctx.lineTo(dir * r * 0.7, r * 0.4);
+      ctx.fill();
+    });
+
+    // Body
+    ctx.beginPath();
+    ctx.arc(0, 0, r, 0, Math.PI * 2);
+    const grad = ctx.createRadialGradient(-r * 0.3, -r * 0.3, r * 0.1, 0, 0, r);
+    grad.addColorStop(0, '#b45309');
+    grad.addColorStop(0.7, '#78350f');
+    grad.addColorStop(1, '#451a03');
+    ctx.fillStyle = grad;
+    ctx.fill();
+    ctx.shadowColor = 'transparent';
+
+    // Cute fangs
+    ctx.fillStyle = '#ffffff';
+    [-r * 0.1, r * 0.1].forEach(fx => {
+      ctx.beginPath();
+      ctx.moveTo(fx - r * 0.04, r * 0.18);
+      ctx.lineTo(fx + r * 0.04, r * 0.18);
+      ctx.lineTo(fx, r * 0.32);
+      ctx.fill();
+    });
+
+    drawBasicAnimalFace(ctx, r, { blush: true, isBlinking: options.blink });
+
   } else if (tier === 13) {
+    // 🎃 13: Gran Rey Calabaza (Glowing Jack-o'-Lantern King)
     ctx.beginPath();
     ctx.arc(0, 0, r, 0, Math.PI * 2);
     const grad = ctx.createRadialGradient(-r * 0.3, -r * 0.3, r * 0.1, 0, 0, r);
@@ -2344,14 +2839,27 @@ function drawHalloweenCreature(ctx, tier, radius, options = {}) {
     ctx.fill();
     ctx.shadowColor = 'transparent';
 
+    // Vertical pumpkin grooves
+    ctx.strokeStyle = 'rgba(154, 52, 18, 0.4)';
+    ctx.lineWidth = Math.max(2, r * 0.04);
+    [-0.55, -0.25, 0.25, 0.55].forEach(gx => {
+      ctx.beginPath();
+      ctx.ellipse(r * gx, 0, r * 0.28, r * 0.95, 0, 0, Math.PI * 2);
+      ctx.stroke();
+    });
+
+    // Green curly stem
     ctx.fillStyle = '#15803d';
     ctx.beginPath();
     ctx.roundRect(-r * 0.1, -r * 1.15, r * 0.2, r * 0.3, 4);
     ctx.fill();
 
+    // Jack-o'-Lantern glowing carved eyes and mouth
     ctx.fillStyle = '#fef08a';
     ctx.shadowColor = '#facc15';
-    ctx.shadowBlur = 10;
+    ctx.shadowBlur = 12;
+
+    // Triangular carved eyes
     [-r * 0.35, r * 0.35].forEach(ex => {
       ctx.beginPath();
       ctx.moveTo(ex, -r * 0.22);
@@ -2361,6 +2869,7 @@ function drawHalloweenCreature(ctx, tier, radius, options = {}) {
       ctx.fill();
     });
 
+    // Triangular nose
     ctx.beginPath();
     ctx.moveTo(0, r * 0.05);
     ctx.lineTo(-r * 0.08, r * 0.18);
@@ -2368,6 +2877,7 @@ function drawHalloweenCreature(ctx, tier, radius, options = {}) {
     ctx.closePath();
     ctx.fill();
 
+    // Zig-zag toothy carved smile
     ctx.beginPath();
     ctx.moveTo(-r * 0.55, r * 0.28);
     ctx.lineTo(-r * 0.35, r * 0.42);
@@ -2382,25 +2892,21 @@ function drawHalloweenCreature(ctx, tier, radius, options = {}) {
     ctx.shadowColor = 'transparent';
 
   } else {
+    // Fallback
     ctx.beginPath();
     ctx.arc(0, 0, r, 0, Math.PI * 2);
     const config = THEME_HALLOWEEN[tier] || THEME_HALLOWEEN[0];
-    const grad = ctx.createRadialGradient(-r * 0.3, -r * 0.3, r * 0.1, 0, 0, r);
-    grad.addColorStop(0, '#ffffff');
-    grad.addColorStop(0.7, config.color);
-    grad.addColorStop(1, '#0f172a');
-    ctx.fillStyle = grad;
+    ctx.fillStyle = config.color;
     ctx.fill();
-    ctx.shadowColor = 'transparent';
-
     drawBasicAnimalFace(ctx, r, { blush: true, isBlinking: options.blink });
   }
 
+  // Glossy glass shine reflection on top left
   ctx.save();
   ctx.beginPath();
   ctx.rotate(-Math.PI / 4.2);
   ctx.ellipse(-r * 0.32, -r * 0.45, r * 0.4, r * 0.18, 0, 0, Math.PI * 2);
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
   ctx.fill();
   ctx.restore();
 
@@ -2877,7 +3383,11 @@ function setupInput() {
   }
 
   function isInteractiveUI(e) {
-    return e.target.closest('button') || e.target.closest('input') || e.target.closest('.theme-switch-container') || e.target.closest('.powerups-container');
+    return e.target.closest('button') || 
+           e.target.closest('input') || 
+           e.target.closest('.theme-switch-container') || 
+           e.target.closest('.powerups-container') ||
+           e.target.closest('#figurines-modal');
   }
 
   gameContainer.addEventListener('mousedown', (e) => {
